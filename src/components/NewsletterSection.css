@@ -1,0 +1,111 @@
+.newsletter-section {
+  position: relative;
+  padding: var(--space-5xl) 0;
+  overflow: hidden;
+}
+
+.newsletter-section__bg {
+  display: none;
+}
+
+.newsletter-section::before,
+.newsletter-section::after {
+  display: none;
+}
+
+.newsletter-section__content {
+  max-width: 580px;
+  margin: 0 auto;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-lg);
+}
+
+.newsletter-section__icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(88, 19, 18, 0.08);
+  border: 1px solid rgba(88, 19, 18, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-maroon);
+}
+
+.newsletter-section__title {
+  color: var(--text-cream);
+}
+
+.newsletter-section__desc {
+  max-width: 440px;
+  text-align: center;
+}
+
+.newsletter-section__form {
+  width: 100%;
+  display: flex;
+  gap: var(--space-sm);
+  max-width: 480px;
+}
+
+@media (max-width: 560px) {
+  .newsletter-section__form {
+    flex-direction: column;
+  }
+}
+
+.newsletter-section__input-wrap {
+  position: relative;
+  flex: 1;
+}
+
+.newsletter-section__input-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-subtle);
+  pointer-events: none;
+}
+
+.newsletter-section__input {
+  width: 100%;
+  padding: 0.875rem 1rem 0.875rem 2.75rem;
+  background: var(--surface-card);
+  border: 1.5px solid var(--border-amber);
+  border-radius: var(--radius-full);
+  color: var(--text-cream);
+  font-size: 0.9375rem;
+  font-family: var(--font-body);
+  transition: border-color var(--transition-base), box-shadow var(--transition-base);
+  outline: none;
+}
+
+.newsletter-section__input::placeholder {
+  color: var(--text-subtle);
+}
+
+.newsletter-section__input:focus {
+  border-color: var(--accent-amber);
+  box-shadow: 0 0 0 3px var(--accent-amber-glow);
+}
+
+.newsletter-section__success {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1.5rem;
+  background: rgba(45, 106, 79, 0.15);
+  border: 1px solid rgba(149, 213, 178, 0.2);
+  border-radius: var(--radius-full);
+  color: #95d5b2;
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+.newsletter-section__privacy {
+  opacity: 0.7;
+}

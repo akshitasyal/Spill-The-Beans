@@ -1,0 +1,34 @@
+.breadcrumbs {
+  padding: 1rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--bg-charcoal, #0d0d0d);
+}
+
+.breadcrumbs__container {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--text-muted, #8e8e8e);
+}
+
+.breadcrumbs__link {
+  color: var(--text-muted, #8e8e8e);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.breadcrumbs__link:hover {
+  color: var(--text-cream, #f5ecd7);
+}
+
+.breadcrumbs__separator {
+  color: rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
+}
+
+.breadcrumbs__current {
+  color: var(--color-amber, #d4880a);
+  font-weight: 500;
+}

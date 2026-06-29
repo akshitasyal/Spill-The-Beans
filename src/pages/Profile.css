@@ -1,0 +1,468 @@
+/* ── Customer Profile Page Styles ── */
+.profile-page {
+  background-color: var(--bg-espresso);
+  min-height: 85vh;
+  padding-top: calc(var(--header-total) + 2rem);
+  padding-bottom: 5rem;
+  color: var(--text-cream);
+}
+
+.profile-container {
+  max-width: 900px !important;
+  width: 100%;
+}
+
+/* Tabs Bar */
+.profile-tabs-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 2px solid rgba(88, 19, 18, 0.15);
+  margin-bottom: 3rem;
+  padding-bottom: 0.25rem;
+}
+
+.profile-tabs {
+  display: flex;
+  gap: 2.5rem;
+}
+
+.profile-tab {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-family: var(--font-heading), serif;
+  font-size: 1.15rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.75rem 0.5rem;
+  position: relative;
+  transition: color 0.2s ease;
+}
+
+.profile-tab:hover {
+  color: var(--text-cream);
+}
+
+.profile-tab--active {
+  color: var(--text-cream);
+}
+
+.profile-tab--active::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  right: 0;
+  height: 2.5px;
+  background-color: var(--text-cream);
+  border-radius: 2px;
+}
+
+.profile-logout-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.profile-logout-btn:hover {
+  color: #f08080;
+}
+
+/* Tab Content */
+.profile-tab-content {
+  min-height: 350px;
+}
+
+/* Empty Orders */
+.profile-empty-orders {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 5rem 1rem;
+}
+
+.profile-empty-orders__icon-wrap {
+  position: relative;
+  margin-bottom: 1.5rem;
+}
+
+.profile-empty-orders__icon {
+  color: var(--text-cream);
+  stroke-width: 1.5;
+}
+
+.profile-empty-orders__badge {
+  position: absolute;
+  top: -4px;
+  right: -8px;
+  background-color: var(--text-cream);
+  color: var(--bg-espresso);
+  font-size: 0.7rem;
+  font-weight: 700;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-empty-orders__title {
+  font-family: var(--font-body), sans-serif;
+  font-size: 1.15rem;
+  font-weight: 500;
+  color: var(--text-cream);
+  margin-bottom: 1.75rem;
+}
+
+.profile-empty-orders__btn {
+  background-color: #3d0c0c;
+  color: #fde0c1;
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-decoration: none;
+  padding: 0.875rem 2.25rem;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(61, 12, 12, 0.15);
+  transition: all 0.2s ease;
+}
+
+.profile-empty-orders__btn:hover {
+  background-color: #581312;
+  transform: translateY(-1px);
+}
+
+/* Orders List */
+.profile-orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.profile-section-title {
+  font-family: var(--font-heading), serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+  color: var(--text-cream);
+}
+
+.profile-order-card {
+  background: var(--surface-card);
+  border: 1px solid var(--border-amber);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.profile-order-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid var(--border-amber);
+  padding-bottom: 0.75rem;
+}
+
+.profile-order-card__id {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--text-cream);
+}
+
+.profile-order-card__date {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 0.15rem;
+}
+
+.profile-order-status-badge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.profile-order-status-badge--confirmed {
+  background-color: rgba(194, 122, 10, 0.15);
+  color: var(--accent-amber);
+}
+
+.profile-order-status-badge--shipped {
+  background-color: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+}
+
+.profile-order-status-badge--delivered {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.profile-order-card__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.profile-order-card__details {
+  font-size: 0.825rem;
+  color: var(--text-muted);
+}
+
+.profile-order-track-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--accent-amber);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.profile-order-track-link:hover {
+  text-decoration: underline;
+}
+
+/* Addresses Section */
+.profile-addresses-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.profile-add-address-btn {
+  background-color: var(--accent-amber);
+  border: none;
+  color: #FFF;
+  font-weight: 600;
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.profile-add-address-btn:hover {
+  background-color: #d88c12;
+}
+
+/* Address Form */
+.profile-address-form {
+  background: var(--surface-card);
+  border: 1px solid var(--border-amber);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: var(--shadow-card);
+}
+
+.profile-address-form__title {
+  font-family: var(--font-heading), serif;
+  font-size: 1.25rem;
+  margin: 0 0 1.25rem 0;
+  color: var(--text-cream);
+  border-bottom: 1px solid var(--border-amber);
+  padding-bottom: 0.5rem;
+}
+
+.profile-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.profile-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.profile-form-group.span-2 {
+  grid-column: span 2;
+}
+
+@media (max-width: 600px) {
+  .profile-form-group.span-2 {
+    grid-column: span 1;
+  }
+}
+
+.profile-form-group label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.profile-form-group input {
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--border-amber);
+  border-radius: 8px;
+  background-color: rgba(253, 224, 193, 0.05);
+  color: var(--text-cream);
+  font-size: 0.85rem;
+  outline: none;
+}
+
+.profile-form-group input:focus {
+  border-color: var(--accent-amber);
+}
+
+.profile-form-group.checkbox-group {
+  grid-column: span 2;
+  flex-direction: row;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem !important;
+  color: var(--text-cream) !important;
+  text-transform: none !important;
+  cursor: pointer;
+}
+
+.checkbox-label input {
+  cursor: pointer;
+  accent-color: var(--accent-amber);
+}
+
+.profile-form-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  justify-content: flex-end;
+}
+
+.btn-save-address {
+  background-color: var(--accent-amber);
+  border: none;
+  color: #FFF;
+  font-weight: 600;
+  padding: 0.55rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.btn-cancel-address {
+  background: none;
+  border: 1px solid var(--border-amber);
+  color: var(--text-muted);
+  font-weight: 500;
+  padding: 0.55rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* Addresses Grid */
+.profile-addresses-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.25rem;
+}
+
+.profile-address-card {
+  background: var(--surface-card);
+  border: 1px solid var(--border-amber);
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 180px;
+}
+
+.profile-address-card--default {
+  border-color: var(--accent-amber);
+  box-shadow: 0 0 10px rgba(194, 122, 10, 0.1);
+}
+
+.profile-address-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.profile-address-card__name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-cream);
+}
+
+.profile-address-default-badge {
+  background-color: var(--accent-amber);
+  color: #FFF;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.profile-address-card__body {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+  margin-bottom: 1rem;
+}
+
+.profile-address-card__phone {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.profile-address-card__actions {
+  border-top: 1px solid var(--border-amber);
+  padding-top: 0.75rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.profile-delete-address-btn {
+  background: none;
+  border: none;
+  color: #f08080;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.profile-delete-address-btn:hover {
+  text-decoration: underline;
+}
+
+.profile-empty-addresses {
+  text-align: center;
+  padding: 4rem 1rem;
+  color: var(--text-muted);
+}
+
+.profile-empty-addresses__icon {
+  margin-bottom: 1rem;
+  stroke-width: 1.5;
+}

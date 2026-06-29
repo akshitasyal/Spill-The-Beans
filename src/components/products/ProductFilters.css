@@ -1,0 +1,195 @@
+.product-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  background: var(--bg-charcoal, #0d0d0d);
+  padding: 1.5rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.product-filters__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.product-filters__title {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  color: var(--text-cream, #f5ecd7);
+  margin: 0;
+}
+
+.product-filters__clear-btn {
+  background: none;
+  border: none;
+  color: var(--color-amber, #d4880a);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  padding: 0;
+  transition: opacity 0.2s ease;
+}
+
+.product-filters__clear-btn:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
+.product-filters__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.product-filters__section-title {
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-cream, #f5ecd7);
+  margin: 0;
+  font-weight: 600;
+}
+
+.product-filters__categories-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.product-filters__cat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  color: var(--text-muted, #8e8e8e);
+  font-family: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.product-filters__cat-item:hover {
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-cream, #f5ecd7);
+}
+
+.product-filters__cat-item--active {
+  background: rgba(212, 136, 10, 0.1) !important;
+  color: var(--color-amber, #d4880a) !important;
+  font-weight: 600;
+}
+
+.product-filters__cat-count {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.product-filters__price-inputs {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.product-filters__price-field {
+  position: relative;
+  flex: 1;
+}
+
+.product-filters__currency {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted, #8e8e8e);
+  font-size: 0.875rem;
+}
+
+.product-filters__price-input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-cream, #f5ecd7);
+  padding: 0.5rem 0.5rem 0.5rem 1.5rem;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.product-filters__price-input:focus {
+  border-color: var(--color-amber, #d4880a);
+}
+
+.product-filters__price-sep {
+  font-size: 0.75rem;
+  color: var(--text-muted, #8e8e8e);
+}
+
+/* Toggle Switch Styles */
+.product-filters__toggle-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  padding: 0.25rem 0;
+}
+
+.product-filters__toggle-text {
+  font-size: 0.875rem;
+  color: var(--text-muted, #8e8e8e);
+}
+
+.product-filters__toggle-wrapper {
+  position: relative;
+  width: 2.5rem;
+  height: 1.25rem;
+}
+
+.product-filters__toggle-input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.product-filters__toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.1);
+  transition: .4s;
+  border-radius: 1.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.product-filters__toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 0.875rem;
+  width: 0.875rem;
+  left: 2px;
+  bottom: 1px;
+  background-color: var(--text-muted, #8e8e8e);
+  transition: .4s;
+  border-radius: 50%;
+}
+
+.product-filters__toggle-input:checked + .product-filters__toggle-slider {
+  background-color: rgba(212, 136, 10, 0.2);
+  border-color: var(--color-amber, #d4880a);
+}
+
+.product-filters__toggle-input:checked + .product-filters__toggle-slider:before {
+  transform: translateX(1.125rem);
+  background-color: var(--color-amber, #d4880a);
+}
