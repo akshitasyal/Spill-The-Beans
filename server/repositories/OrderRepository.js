@@ -216,7 +216,7 @@ export const OrderRepository = {
 
     return prisma.$transaction(async (tx) => {
       // 1. Update Order record
-      const updatedOrder = await tx.order.update({
+      await tx.order.update({
         where: { id },
         data: {
           status: newStatus,

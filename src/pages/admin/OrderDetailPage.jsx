@@ -6,7 +6,7 @@ import StatusBadge from '../../components/admin/StatusBadge';
 import InvoiceCard from '../../components/admin/InvoiceCard';
 import { 
   ArrowLeft, MapPin, CreditCard, Package, Truck, Printer, Mail, 
-  XCircle, CheckCircle2, Clock, ShieldAlert, History, Send, Sparkles, AlertCircle
+  XCircle, CheckCircle2, History, Sparkles
 } from 'lucide-react';
 
 const STAGE_FLOW = [
@@ -123,7 +123,7 @@ export default function OrderDetailPage() {
         };
         localStorage.setItem('stb_admin_detailed_orders', JSON.stringify(adminDetailed));
       }
-    } catch (e) {}
+    } catch (_e) {}
   };
 
   // Execute guided status change
@@ -148,7 +148,7 @@ export default function OrderDetailPage() {
       } else {
         showToast('Failed to update status.', true);
       }
-    } catch (err) {
+    } catch (_err) {
       // Local fallback update for demo
       const updatedOrder = {
         ...order,
@@ -185,7 +185,7 @@ export default function OrderDetailPage() {
         setOrder(res.data);
         showToast('Order cancelled.');
       }
-    } catch (e) {
+    } catch (_e) {
       setOrder({ ...order, status: 'CANCELLED' });
       showToast('Order cancelled.');
     }
@@ -204,7 +204,7 @@ export default function OrderDetailPage() {
         actorName: 'Admin (Akshita)',
       });
       showToast('Courier partner and tracking number updated.');
-    } catch (e) {
+    } catch (_e) {
       showToast('Courier details saved.');
     }
     setSavingCourier(false);
@@ -216,7 +216,7 @@ export default function OrderDetailPage() {
       InvoiceService.printInvoice(order);
       try {
         OrderService.logAdminAction(id, { actorName: 'Admin (Akshita)', action: 'INVOICE_PRINTED', details: 'Printed official tax invoice.' });
-      } catch (e) {}
+      } catch (_e) {}
     }
   };
 

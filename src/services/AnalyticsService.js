@@ -7,7 +7,7 @@ function normalizeAmount(tot) {
   return val > 10000 ? Math.round(val / 100) : Math.round(val);
 }
 
-function buildAnalyticsData(orders = [], customers = []) {
+function buildAnalyticsData(orders = []) {
   const now = new Date();
   
   // Only valid, non-cancelled orders
@@ -77,7 +77,7 @@ function buildAnalyticsData(orders = [], customers = []) {
 export const AnalyticsService = {
   async getAnalytics() {
     let apiOrders = [];
-    let apiCustomers = [];
+    let _apiCustomers = [];
     try {
       const [oRes, cRes] = await Promise.allSettled([
         fetch(`${API_BASE_URL}/orders`).then(r => r.json()),
@@ -87,18 +87,18 @@ export const AnalyticsService = {
         apiOrders = oRes.value.data || oRes.value.items || [];
       }
       if (cRes.status === 'fulfilled' && cRes.value?.success) {
-        apiCustomers = cRes.value.data || [];
+        _apiCustomers = cRes.value.data || [];
       }
-    } catch (e) {}
+    } catch (_e) {}
 
     let placedOrders = [];
     let adminOrders = [];
     try {
       placedOrders = Object.values(JSON.parse(localStorage.getItem('stb_placed_orders') || '{}'));
-    } catch (e) {}
+    } catch (_e) {}
     try {
       adminOrders = JSON.parse(localStorage.getItem('stb_admin_detailed_orders') || '[]');
-    } catch (e) {}
+    } catch (_e) {}
 
     const orderMap = {};
     apiOrders.forEach(o => { if (o && o.id) orderMap[o.id] = o; });
@@ -106,7 +106,7 @@ export const AnalyticsService = {
     adminOrders.forEach(o => { if (o && o.id) orderMap[o.id] = { ...orderMap[o.id], ...o }; });
 
     const allOrders = Object.values(orderMap);
-    const analyticsData = buildAnalyticsData(allOrders, apiCustomers);
+    const analyticsData = buildAnalyticsData(allOrders);
 
     return { success: true, data: analyticsData };
   },

@@ -4,7 +4,7 @@
 import { Router } from 'express';
 import { OrderController } from '../controllers/OrderController.js';
 import { validate } from '../middleware/validate.js';
-import { placeOrderSchema, updateOrderStatusSchema } from '../validation/schemas.js';
+import { placeOrderSchema } from '../validation/schemas.js';
 
 const router = Router();
 

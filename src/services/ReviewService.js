@@ -11,7 +11,7 @@ export const ReviewService = {
           apiReviews = json.data;
         }
       }
-    } catch (e) {
+    } catch (_e) {
       // API unavailable or network offline
     }
 
@@ -19,10 +19,10 @@ export const ReviewService = {
     let adminReviews = [];
     try {
       localReviews = JSON.parse(localStorage.getItem('stb_product_reviews') || '[]');
-    } catch (e) {}
+    } catch (_e) {}
     try {
       adminReviews = JSON.parse(localStorage.getItem('stb_admin_reviews') || '[]');
-    } catch (e) {}
+    } catch (_e) {}
 
     const mergedMap = {};
 
@@ -80,7 +80,7 @@ export const ReviewService = {
         const json = await res.json();
         return json;
       }
-    } catch (e) {}
+    } catch (_e) {}
 
     // Update in local storage
     try {
@@ -92,7 +92,7 @@ export const ReviewService = {
       const admin = JSON.parse(localStorage.getItem('stb_admin_reviews') || '[]');
       const updatedAdmin = admin.map(r => r.id === id ? { ...r, isApproved, status } : r);
       localStorage.setItem('stb_admin_reviews', JSON.stringify(updatedAdmin));
-    } catch (e) {}
+    } catch (_e) {}
 
     return { success: true };
   },
@@ -106,7 +106,7 @@ export const ReviewService = {
         const json = await res.json();
         return json;
       }
-    } catch (e) {}
+    } catch (_e) {}
 
     // Delete in local storage
     try {
@@ -115,7 +115,7 @@ export const ReviewService = {
 
       const admin = JSON.parse(localStorage.getItem('stb_admin_reviews') || '[]');
       localStorage.setItem('stb_admin_reviews', JSON.stringify(admin.filter(r => r.id !== id)));
-    } catch (e) {}
+    } catch (_e) {}
 
     return { success: true, message: 'Review deleted successfully.' };
   },
@@ -140,7 +140,7 @@ export const ReviewService = {
       const existing = JSON.parse(localStorage.getItem('stb_product_reviews') || '[]');
       existing.unshift(newRev);
       localStorage.setItem('stb_product_reviews', JSON.stringify(existing));
-    } catch (e) {}
+    } catch (_e) {}
 
     // 2. Post to backend API
     try {
@@ -155,7 +155,7 @@ export const ReviewService = {
           return json;
         }
       }
-    } catch (e) {}
+    } catch (_e) {}
 
     return { success: true, data: newRev };
   }

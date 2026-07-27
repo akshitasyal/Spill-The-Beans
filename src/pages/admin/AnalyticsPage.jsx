@@ -201,10 +201,10 @@ export default function AnalyticsPage() {
   const revenueChange = prevMonth.revenue ? Math.round((lastMonth.revenue - prevMonth.revenue) / prevMonth.revenue * 100) : 0;
   const ordersChange = prevMonth.orders ? Math.round((lastMonth.orders - prevMonth.orders) / prevMonth.orders * 100) : 0;
 
-  let currentRevenue = 0;
-  let currentOrders = 0;
-  let currentAOV = 0;
-  let periodLabel = 'This Month';
+  let currentRevenue;
+  let currentOrders;
+  let currentAOV;
+  let periodLabel;
 
   if (isDaily) {
     periodLabel = 'Today';

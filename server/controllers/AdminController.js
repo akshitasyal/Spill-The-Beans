@@ -541,9 +541,9 @@ export const AdminController = {
     }
   },
 
-  async createReview(req, res, next) {
+  async createReview(req, res) {
     try {
-      const { rating, title, body, userName, userEmail, productName, isApproved } = req.body;
+      const { rating, title, body, userEmail, productName, isApproved } = req.body;
 
       let productId = req.body.productId;
       if (!productId && productName) {
@@ -594,7 +594,7 @@ export const AdminController = {
       });
 
       res.json({ success: true, data: review });
-    } catch (err) {
+    } catch (_err) {
       res.json({ success: true, message: 'Review recorded.' });
     }
   },

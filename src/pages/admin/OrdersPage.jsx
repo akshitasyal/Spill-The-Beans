@@ -5,14 +5,13 @@ import { SectionHeader } from './AdminLayout';
 import FilterBar from '../../components/admin/FilterBar';
 import StatusBadge from '../../components/admin/StatusBadge';
 import ConfirmationModal from '../../components/admin/ConfirmationModal';
-import { RefreshCw, Package, ArrowRight, Clock, CheckCircle2, Truck, Flame, LayoutGrid, List } from 'lucide-react';
+import { RefreshCw, Package, ArrowRight, CheckCircle2, Truck, Flame, LayoutGrid, List } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 20;
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedIds, setSelectedIds] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState(null);
@@ -44,7 +43,6 @@ export default function OrdersPage() {
       if (res.success) {
         setOrders(res.data);
         setCurrentPage(1);
-        setSelectedIds([]);
       }
       setLoading(false);
     }).catch(err => {

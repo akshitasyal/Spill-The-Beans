@@ -8,10 +8,12 @@ This document describes the high-level architecture, directory layout, and desig
 
 ```txt
 impulse-coffee/
-├── docs/                     # Documentation files (API, Deployment, Architecture)
+├── config/                   # Custom application configuration modules
+├── docs/                     # Documentation files (API, Deployment, Architecture, Task Tracker)
 ├── public/                   # Static assets (robots.txt, sitemap.xml, favicon)
+├── scripts/                  # Utility, maintenance, and asset automation scripts
 ├── server/                   # Express Backend Application
-│   ├── controllers/          # Request handers and route controllers
+│   ├── controllers/          # Request handlers and route controllers
 │   ├── db/                   # Prisma database client configuration
 │   ├── middleware/           # Express middleware (rate limiting, logging, errors)
 │   ├── prisma/               # Schema design (schema.prisma) and migration scripts

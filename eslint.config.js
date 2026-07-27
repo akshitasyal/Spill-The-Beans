@@ -8,13 +8,14 @@ export default defineConfig([
   globalIgnores(['dist']),
   // Node.js server files
   {
-    files: ['server/**/*.{js,cjs}', 'check_icons.js'],
+    files: ['server/**/*.{js,cjs}', 'scripts/**/*.{js,cjs}'],
     extends: [js.configs.recommended],
     languageOptions: {
       globals: { ...globals.node },
     },
     rules: {
-      'no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      'no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }],
+      'no-empty': ['error', { allowEmptyCatch: true }],
     },
   },
   // Frontend React files
@@ -30,6 +31,8 @@ export default defineConfig([
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
     rules: {
+      'no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }],
+      'no-empty': ['error', { allowEmptyCatch: true }],
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
       // These rules flag legitimate and common React patterns
       'react-hooks/set-state-in-effect': 'off',

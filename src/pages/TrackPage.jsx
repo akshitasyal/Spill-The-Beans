@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Package, Search, CheckCircle2, Clock, MapPin, Truck, AlertCircle, Sparkles, ShieldCheck } from 'lucide-react';
+import { Search, CheckCircle2, MapPin, Truck, AlertCircle, Sparkles, ShieldCheck } from 'lucide-react';
 import PageWrapper from '../components/PageWrapper';
 
 // Default Coffee Stages Sequence
@@ -68,7 +68,6 @@ export default function TrackPage() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
-  const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
     const id = searchParams.get('id');
@@ -86,7 +85,6 @@ export default function TrackPage() {
     const exactId = idToSearch.trim().replace('#', '');
     const upperId = exactId.toUpperCase();
     setLoading(true);
-    setNotFound(false);
 
     try {
       // 1. Try real API backend with exact ID & track endpoint
@@ -103,7 +101,7 @@ export default function TrackPage() {
           return;
         }
       }
-    } catch (e) {
+    } catch (_e) {
       // API unavailable or network offline
     }
 
@@ -117,7 +115,7 @@ export default function TrackPage() {
         setLoading(false);
         return;
       }
-    } catch (e) {}
+    } catch (_e) {}
 
     // 3. Check localStorage stb_admin_detailed_orders
     try {
@@ -129,7 +127,7 @@ export default function TrackPage() {
         setLoading(false);
         return;
       }
-    } catch (e) {}
+    } catch (_e) {}
 
     // 4. Check MOCK_ORDER_MAP fallback
     if (MOCK_ORDER_MAP[upperId] || MOCK_ORDER_MAP[exactId]) {
@@ -137,7 +135,6 @@ export default function TrackPage() {
       setSearched(true);
     } else {
       setOrder(null);
-      setNotFound(true);
       setSearched(true);
     }
     setLoading(false);
@@ -295,7 +292,6 @@ export default function TrackPage() {
                       {STAGES.map((stage, idx) => {
                         const isCompleted = idx < currentStageIndex;
                         const isCurrent = idx === currentStageIndex && !isCancelled;
-                        const isFuture = idx > currentStageIndex && !isCancelled;
                         const evt = eventsByStage[idx];
 
                         // Time display formatting
