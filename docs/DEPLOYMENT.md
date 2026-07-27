@@ -16,6 +16,7 @@ Before deploying, ensure you configure production keys in your hosting provider'
 ### Backend (.env)
 - `PORT`: Port to run the application on (defaults to `4000`)
 - `NODE_ENV`: Set to `production`
+- `CLIENT_URL`: Comma-separated allowed origin URLs (e.g. `http://localhost:5173,https://spill-the-beans-mu.vercel.app`)
 - `DATABASE_URL`: Production PostgreSQL connection string
 - `CLERK_SECRET_KEY`: Clerk Secret Key
 - `STRIPE_SECRET_KEY`: Stripe API Production Secret Key

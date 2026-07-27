@@ -43,11 +43,43 @@ app.use(helmet({
 }));
 
 // CORS Configuration
+const getOrigins = () => {
+  const envOrigins = (process.env.CLIENT_URL || '')
+    .split(',')
+    .map((url) => url.trim().replace(/\/$/, ''))
+    .filter(Boolean);
+
+  const defaultOrigins = [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'https://spill-the-beans-mu.vercel.app',
+  ];
+
+  return Array.from(new Set([...envOrigins, ...defaultOrigins]));
+};
+
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+
+    const normalizedOrigin = origin.replace(/\/$/, '');
+    const allowedList = getOrigins();
+
+    const isAllowed =
+      allowedList.includes(normalizedOrigin) ||
+      allowedList.includes('*') ||
+      /^https:\/\/[a-zA-Z0-9-]+\.vercel\.app$/.test(normalizedOrigin);
+
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      logger.warn(`CORS blocked request from origin: ${origin}`);
+      callback(new Error(`CORS policy: Origin ${origin} is not allowed`));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-clerk-id'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-clerk-id', 'X-Requested-With', 'Accept'],
 }));
 
 app.use(express.json({ limit: '10mb' }));
