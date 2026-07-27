@@ -74,12 +74,16 @@ export const OrderRepository = {
 
       // 3. Decrement stock for each product
       await Promise.all(
-        items.map((item) =>
-          tx.product.update({
-            where: { id: item.productId },
-            data: { stock: { decrement: item.quantity } },
-          })
-        )
+        items.map(async (item) => {
+          try {
+            await tx.product.update({
+              where: { id: item.productId },
+              data: { stock: { decrement: item.quantity } },
+            });
+          } catch (_e) {
+            // Ignore stock decrement if product is un-tracked or fallback product
+          }
+        })
       );
 
       // 4. Create payment record

@@ -4,6 +4,13 @@ Spill The Beans is a modern, high-end e-commerce application built for specialty
 
 ---
 
+## 🚀 Live Production Environments
+
+- **Frontend App (Vercel)**: [https://spill-the-beans-mu.vercel.app](https://spill-the-beans-mu.vercel.app)
+- **Backend API (Render)**: [https://spill-the-beans.onrender.com](https://spill-the-beans.onrender.com)
+
+---
+
 ## ⚡ Quickstart
 
 ### Prerequisites

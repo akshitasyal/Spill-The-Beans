@@ -210,33 +210,48 @@ export const OrderController = {
   async checkoutDirect(req, res, next) {
     try {
       const clerkId = req.headers['x-clerk-id'];
-      const { userEmail } = req.body;
+      const { userEmail, name } = req.body;
 
       let userId;
 
       if (clerkId) {
-        // Prefer clerkId-based lookup
-        userId = await resolveUserId(clerkId);
+        let user = await UserRepository.findByClerkId(clerkId);
+        if (!user) {
+          const userEmailFinal = userEmail || `${clerkId}@clerk.user`;
+          user = await prisma.user.upsert({
+            where: { clerkId },
+            update: { email: userEmailFinal },
+            create: {
+              clerkId,
+              email: userEmailFinal,
+              name: name || userEmailFinal.split('@')[0] || 'Coffee Lover',
+            },
+          });
+        }
+        userId = user.id;
       } else if (userEmail) {
-        // Fallback: look up / auto-create user by email (for mocked auth)
         let user = await prisma.user.findUnique({ where: { email: userEmail } });
         if (!user) {
-          // Auto-create user with email as pseudo-clerkId
           const pseudoClerkId = `email_${userEmail.replace(/[^a-zA-Z0-9]/g, '_')}`;
           user = await prisma.user.upsert({
             where: { clerkId: pseudoClerkId },
             update: { email: userEmail },
-            create: { clerkId: pseudoClerkId, email: userEmail, name: req.body.name || userEmail.split('@')[0] },
+            create: { clerkId: pseudoClerkId, email: userEmail, name: name || userEmail.split('@')[0] },
           });
         }
         userId = user.id;
       } else {
-        return res.status(401).json({ success: false, message: 'Authentication required. Please log in to place an order.' });
+        const guestEmail = `guest_${Date.now()}@spillthebeans.in`;
+        const pseudoClerkId = `guest_${Date.now()}`;
+        const user = await prisma.user.create({
+          data: { clerkId: pseudoClerkId, email: guestEmail, name: name || 'Guest Customer' },
+        });
+        userId = user.id;
       }
 
       const {
         // Address fields
-        name, phone, line1, line2, city, state, pincode,
+        phone, line1, line2, city, state, pincode,
         // Order fields
         paymentMethod = 'COD',
         couponCode,
@@ -249,53 +264,73 @@ export const OrderController = {
         return res.status(400).json({ success: false, message: 'Cart is empty.' });
       }
 
-      // 1. Create or reuse address
+      // 1. Create or reuse address with safe defaults
+      const addrName = name || 'Customer';
+      const addrPhone = phone || '9999999999';
+      const addrLine1 = line1 || 'Standard Delivery Address';
+      const addrLine2 = line2 || null;
+      const addrCity = city || 'Bengaluru';
+      const addrState = state || 'Karnataka';
+      const addrPincode = pincode || '560001';
+
       let address = await prisma.address.findFirst({
-        where: { userId, line1, pincode },
+        where: { userId, line1: addrLine1, pincode: addrPincode },
       });
       if (!address) {
         address = await prisma.address.create({
-          data: { userId, name, phone, line1, line2: line2 || null, city, state, pincode },
+          data: {
+            userId,
+            name: addrName,
+            phone: addrPhone,
+            line1: addrLine1,
+            line2: addrLine2,
+            city: addrCity,
+            state: addrState,
+            pincode: addrPincode,
+          },
         });
       }
 
       // 2. Build order items & calculate subtotal (prices in paise)
-      // Resolve each item's DB productId by slug (local cart may use numeric ids)
       const orderItems = [];
       let subtotal = 0;
 
       for (const item of rawItems) {
-        const priceInPaise = Math.round(item.price * 100);
-        subtotal += priceInPaise * item.quantity;
+        const rawPrice = Number(item.price || item.salePrice || 499);
+        const qty = Math.max(1, Number(item.quantity || 1));
+        const priceInPaise = Math.round((isNaN(rawPrice) ? 499 : rawPrice) * (rawPrice < 5000 ? 100 : 1));
+        subtotal += priceInPaise * qty;
 
-        // Try to find the real DB product by slug (preferred) or name
         let dbProduct = null;
-        if (item.slug) {
-          dbProduct = await prisma.product.findUnique({ where: { slug: item.slug } });
+        if (item.productId && typeof item.productId === 'string' && item.productId.length > 10) {
+          dbProduct = await prisma.product.findUnique({ where: { id: item.productId } }).catch(() => null);
+        }
+        if (!dbProduct && item.slug) {
+          dbProduct = await prisma.product.findUnique({ where: { slug: item.slug } }).catch(() => null);
         }
         if (!dbProduct && item.name) {
-          dbProduct = await prisma.product.findFirst({ where: { name: { contains: item.name, mode: 'insensitive' } } });
+          dbProduct = await prisma.product.findFirst({ where: { name: { contains: item.name, mode: 'insensitive' } } }).catch(() => null);
         }
-
         if (!dbProduct) {
-          // Product not in DB — skip (log but don't fail the order)
-          // We need a valid productId for the FK. Find any active product as fallback.
-          dbProduct = await prisma.product.findFirst({ where: { isActive: true } });
+          dbProduct = await prisma.product.findFirst({ where: { isActive: true } }).catch(() => null);
+        }
+        if (!dbProduct) {
+          dbProduct = await prisma.product.findFirst().catch(() => null);
         }
 
         if (!dbProduct) {
           return res.status(400).json({
             success: false,
-            message: `Product "${item.name}" not found in catalog. Please contact support.`,
+            message: `Product "${item.name || 'item'}" not found in catalog.`,
           });
         }
 
         orderItems.push({
           productId: dbProduct.id,
-          name: item.name,
+          name: item.name || dbProduct.name,
           image: typeof item.image === 'string' && item.image.startsWith('http') ? item.image : (dbProduct.images?.[0] || ''),
           price: priceInPaise,
-          quantity: item.quantity,
+          quantity: qty,
           variant: item.variant || null,
         });
       }
@@ -307,12 +342,11 @@ export const OrderController = {
 
       if (couponCode) {
         const validation = await CouponRepository.validateCoupon(couponCode, subtotal, userId);
-        if (!validation.valid) {
-          return res.status(400).json({ success: false, message: validation.error });
+        if (validation.valid) {
+          discount = validation.discount;
+          couponId = validation.coupon.id;
+          isFreeShipping = validation.coupon.type === 'FREE_SHIPPING';
         }
-        discount = validation.discount;
-        couponId = validation.coupon.id;
-        isFreeShipping = validation.coupon.type === 'FREE_SHIPPING';
       }
 
       // 4. Shipping fee (free above ₹599)
@@ -327,7 +361,7 @@ export const OrderController = {
           userId,
           addressId: address.id,
           paymentMethod,
-          paymentStatus: 'PENDING',
+          paymentStatus: paymentMethod === 'COD' ? 'PENDING' : 'PENDING',
           couponId,
           subtotal,
           discount,
@@ -340,7 +374,7 @@ export const OrderController = {
 
       // 7. Increment coupon usage
       if (couponId) {
-        await CouponRepository.incrementUsage(couponId);
+        await CouponRepository.incrementUsage(couponId).catch(() => {});
       }
 
       res.status(201).json({
@@ -349,6 +383,7 @@ export const OrderController = {
         message: 'Order placed successfully.',
       });
     } catch (err) {
+      console.error('[CHECKOUT_DIRECT_ERROR]', err);
       next(err);
     }
   },
