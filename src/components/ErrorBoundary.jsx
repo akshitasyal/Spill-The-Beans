@@ -33,7 +33,7 @@ export default class ErrorBoundary extends React.Component {
               <button onClick={() => window.location.reload()} style={reloadBtn}>Reload Page</button>
               <a href="/" style={homeBtn}>Back Home</a>
             </div>
-            {process.env.NODE_ENV !== 'production' && (
+            {import.meta.env.MODE !== 'production' && (
               <pre style={stackTrace}>{this.state.error?.toString()}</pre>
             )}
           </div>

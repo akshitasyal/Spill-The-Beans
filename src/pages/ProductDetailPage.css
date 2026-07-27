@@ -359,3 +359,38 @@
   margin-top: 0.75rem;
   font-weight: 500;
 }
+
+/* Review Form Styles */
+.product-detail-custom__write-review {
+  margin-top: 4rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.product-detail-custom__review-form {
+  margin-top: 1.5rem;
+  max-width: 600px;
+}
+
+.review-submit-success-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  background-color: rgba(149, 213, 178, 0.08);
+  border: 1px solid rgba(149, 213, 178, 0.2);
+  border-radius: 6px;
+  padding: 1.25rem;
+  max-width: 600px;
+  margin-top: 1rem;
+}
+
+.review-form-login-prompt {
+  background-color: rgba(253, 224, 193, 0.02);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 1.5rem;
+  text-align: center;
+  max-width: 600px;
+  margin-top: 1rem;
+}
+

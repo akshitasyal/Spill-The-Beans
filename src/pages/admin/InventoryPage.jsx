@@ -30,8 +30,7 @@ export default function InventoryPage() {
     fetchInventory();
   }, []);
 
-  const handleAdjustStockSubmit = async (e, id, prevStock, direction) => {
-    e.preventDefault();
+  const handleAdjustStock = async (id, prevStock, direction) => {
     if (!adjustVal || isNaN(adjustVal) || Number(adjustVal) <= 0) {
       alert('Enter a valid positive number for adjustment');
       return;
@@ -150,23 +149,37 @@ export default function InventoryPage() {
                   <td>
                     <div style={actionsRow}>
                       {adjustingId === item.id ? (
-                        <div style={adjustWrapper}>
-                          <form onSubmit={(e) => handleAdjustStockSubmit(e, item.id, item.stock, 1)} style={{ display: 'flex', gap: '0.25rem' }}>
-                            <input
-                              type="number"
-                              value={adjustVal}
-                              onChange={(e) => setAdjustVal(e.target.value)}
-                              style={inlineInput}
-                              placeholder="Qty"
-                            />
-                            <button type="submit" style={{ ...inlineSubmitBtn, background: '#2e7d32' }} title="Add stock">
-                              <ArrowUp size={12} />
-                            </button>
-                            <button type="button" onClick={(e) => handleAdjustStockSubmit(e, item.id, item.stock, -1)} style={{ ...inlineSubmitBtn, background: '#d32f2f' }} title="Subtract stock">
-                              <ArrowDown size={12} />
-                            </button>
-                            <button type="button" onClick={() => setAdjustingId(null)} style={inlineCancelBtn}>✗</button>
-                          </form>
+                        <div style={{ ...adjustWrapper, display: 'flex', gap: '0.25rem' }}>
+                          <input
+                            type="number"
+                            value={adjustVal}
+                            onChange={(e) => setAdjustVal(e.target.value)}
+                            style={inlineInput}
+                            placeholder="Qty"
+                          />
+                          <button 
+                            type="button" 
+                            onClick={() => handleAdjustStock(item.id, item.stock, 1)} 
+                            style={{ ...inlineSubmitBtn, background: '#2e7d32', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} 
+                            title="Add stock"
+                          >
+                            <ArrowUp size={12} />
+                          </button>
+                          <button 
+                            type="button" 
+                            onClick={() => handleAdjustStock(item.id, item.stock, -1)} 
+                            style={{ ...inlineSubmitBtn, background: '#d32f2f', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} 
+                            title="Subtract stock"
+                          >
+                            <ArrowDown size={12} />
+                          </button>
+                          <button 
+                            type="button" 
+                            onClick={() => { setAdjustingId(null); setAdjustVal(''); }} 
+                            style={{ ...inlineCancelBtn, cursor: 'pointer' }}
+                          >
+                            ✗
+                          </button>
                         </div>
                       ) : (
                         <button onClick={() => { setAdjustingId(item.id); setAdjustVal(''); }} style={adjustTriggerBtn}>

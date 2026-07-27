@@ -7,7 +7,7 @@
  * Must be the LAST middleware registered in app.js.
  * Express identifies error-handling middleware by the 4-argument signature.
  */
-export function errorHandler(err, req, res, next) {
+export function errorHandler(err, req, res, _next) {
   console.error('[ERROR]', {
     message: err.message,
     stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,

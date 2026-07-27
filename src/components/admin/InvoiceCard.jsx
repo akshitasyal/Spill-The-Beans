@@ -3,12 +3,16 @@ import { InvoiceService } from '../../services/InvoiceService';
 import { Printer, Download, FileText } from 'lucide-react';
 
 export default function InvoiceCard({ order }) {
-  const handlePrint = () => {
+  if (!order) return null;
+
+  const handlePrint = (e) => {
+    e?.preventDefault();
     InvoiceService.printInvoice(order);
   };
 
-  const handleDownload = async () => {
-    await InvoiceService.downloadInvoicePDF(order);
+  const handleDownload = (e) => {
+    e?.preventDefault();
+    InvoiceService.downloadInvoicePDF(order);
   };
 
   return (

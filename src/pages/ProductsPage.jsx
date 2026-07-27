@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { SlidersHorizontal, ArrowRight, X } from 'lucide-react';
+import { SlidersHorizontal, X } from 'lucide-react';
 import { getProducts, getCategories } from '../services/products';
 import Breadcrumbs from '../components/ui/Breadcrumbs';
 import Pagination from '../components/ui/Pagination';

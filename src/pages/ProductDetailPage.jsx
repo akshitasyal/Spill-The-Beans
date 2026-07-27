@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { ArrowLeft, Star, Heart, Loader2, Info, CheckCircle2, XCircle } from 'lucide-react';
+import { Star, Loader2, Info, CheckCircle2, XCircle } from 'lucide-react';
 import { getProductBySlug } from '../services/products';
 import ProductGallery from '../components/products/ProductGallery';
 import RelatedProducts from '../components/products/RelatedProducts';
@@ -9,17 +9,30 @@ import Breadcrumbs from '../components/ui/Breadcrumbs';
 import StarRating from '../components/StarRating';
 import RoastBadge from '../components/RoastBadge';
 import PageWrapper from '../components/PageWrapper';
+import { useAuth } from '../context/AuthContext';
+import { ReviewService } from '../services/ReviewService';
+import { useCurrency } from '../context/CurrencyContext';
 import './ProductDetailPage.css';
 
 export default function ProductDetailPage() {
   const { slug } = useParams();
-  const navigate = useNavigate();
+  const { user, isLoggedIn } = useAuth();
+  const { formatPrice } = useCurrency();
   
   const [data, setData] = useState(null);
-  
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('about');
+
+  // Submit review states
+  const [rating, setRating] = useState(5);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [reviewTitle, setReviewTitle] = useState('');
+  const [reviewBody, setReviewBody] = useState('');
+  const [reviewsList, setReviewsList] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   useEffect(() => {
     if (!slug) return;
@@ -44,6 +57,32 @@ export default function ProductDetailPage() {
 
     fetchDetail();
   }, [slug]);
+
+  const { product, category, reviewSummary, relatedProducts } = data || {};
+
+  useEffect(() => {
+    if (product) {
+      ReviewService.getReviews().then(res => {
+        if (res.success) {
+          const productReviews = res.data.filter(
+            r => r.product.name.toLowerCase() === product.name.toLowerCase() &&
+            (r.isApproved || (user && r.user.email === user.email))
+          );
+          if (productReviews.length > 0) {
+            setReviewsList(productReviews);
+          } else {
+            setReviewsList(reviewSummary?.recentReviews || []);
+          }
+        } else {
+          setReviewsList(reviewSummary?.recentReviews || []);
+        }
+      }).catch(() => {
+        setReviewsList(reviewSummary?.recentReviews || []);
+      });
+    } else if (reviewSummary) {
+      setReviewsList(reviewSummary.recentReviews || []);
+    }
+  }, [product, reviewSummary, user]);
 
   if (isLoading) {
     return (
@@ -74,7 +113,46 @@ export default function ProductDetailPage() {
     );
   }
 
-  const { product, category, reviewSummary, relatedProducts } = data;
+  const handleSubmitReview = async (e) => {
+    e.preventDefault();
+    if (!reviewTitle.trim() || !reviewBody.trim()) {
+      setSubmitError('Please fill out all fields.');
+      return;
+    }
+    setSubmitError('');
+    setIsSubmitting(true);
+    try {
+      const res = await ReviewService.createReview({
+        rating,
+        title: reviewTitle,
+        body: reviewBody,
+        userName: user?.name || 'Gourmet Drinker',
+        userEmail: user?.email || 'anonymous@example.com',
+        productName: product.name
+      });
+      if (res.success) {
+        setSubmitSuccess(true);
+        setReviewTitle('');
+        setReviewBody('');
+        
+        // Reload reviews to show the new pending/approved review in local list
+        const updated = await ReviewService.getReviews();
+        if (updated.success) {
+          const productReviews = updated.data.filter(
+            r => r.product.name.toLowerCase() === product.name.toLowerCase() &&
+            (r.isApproved || (user && r.user.email === user.email))
+          );
+          if (productReviews.length > 0) {
+            setReviewsList(productReviews);
+          }
+        }
+      }
+    } catch (err) {
+      setSubmitError(err.message || 'Failed to submit review.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const discount = product.salePrice
     ? Math.round(((product.price - product.salePrice) / product.price) * 100)
@@ -154,11 +232,11 @@ export default function ProductDetailPage() {
               {/* Pricing */}
               <div className="product-detail-custom__price-row">
                 <span className="product-detail-custom__price-current">
-                  ₹{priceInINR.toLocaleString('en-IN')}
+                  {formatPrice(priceInINR)}
                 </span>
                 {originalPriceInINR && (
                   <span className="product-detail-custom__price-original">
-                    ₹{originalPriceInINR.toLocaleString('en-IN')}
+                    {formatPrice(originalPriceInINR)}
                   </span>
                 )}
                 {discount && (
@@ -293,29 +371,36 @@ export default function ProductDetailPage() {
               )}
             </div>
           </div>
-
           {/* Product Reviews Preview */}
           <div className="product-detail-custom__reviews-section">
             <h3 className="heading-2 text-cream">Customer Reviews</h3>
             <div className="product-detail-custom__reviews-summary-box">
               <div className="product-detail-custom__big-rating">
-                <span className="product-detail-custom__big-num">{reviewSummary.averageRating || 4.8}</span>
-                <StarRating rating={reviewSummary.averageRating || 4.8} />
+                <span className="product-detail-custom__big-num">
+                  {reviewsList.length > 0 
+                    ? (reviewsList.reduce((acc, r) => acc + r.rating, 0) / reviewsList.length).toFixed(1)
+                    : (reviewSummary?.averageRating || 4.8)}
+                </span>
+                <StarRating 
+                  rating={reviewsList.length > 0 
+                    ? (reviewsList.reduce((acc, r) => acc + r.rating, 0) / reviewsList.length)
+                    : (reviewSummary?.averageRating || 4.8)} 
+                />
                 <span className="text-xs text-muted" style={{ marginTop: '0.25rem' }}>
-                  Based on {reviewSummary.reviewCount} ratings
+                  Based on {reviewsList.length} ratings
                 </span>
               </div>
               <div className="product-detail-custom__rating-breakdown">
                 {[5, 4, 3, 2, 1].map((stars) => {
-                  const count = reviewSummary.recentReviews.filter(r => r.rating === stars).length;
-                  const pct = reviewSummary.reviewCount > 0 ? (count / reviewSummary.reviewCount) * 100 : 0;
+                  const count = reviewsList.filter(r => r.rating === stars).length;
+                  const pct = reviewsList.length > 0 ? Math.round((count / reviewsList.length) * 100) : 0;
                   return (
                     <div key={stars} className="product-detail-custom__breakdown-row">
                       <span className="text-xs text-muted">{stars} ★</span>
                       <div className="product-detail-custom__breakdown-bar">
-                        <div className="product-detail-custom__breakdown-fill" style={{ width: `${stars === 5 ? 85 : stars === 4 ? 12 : 3}%` }} />
+                        <div className="product-detail-custom__breakdown-fill" style={{ width: `${pct}%` }} />
                       </div>
-                      <span className="text-xs text-muted">{stars === 5 ? '85%' : stars === 4 ? '12%' : '3%'}</span>
+                      <span className="text-xs text-muted">{pct}%</span>
                     </div>
                   );
                 })}
@@ -325,15 +410,22 @@ export default function ProductDetailPage() {
             {/* Recent Reviews List */}
             <div className="product-detail-custom__reviews-list">
               <h4 className="heading-3 text-cream">Verified Purchase Reviews</h4>
-              {reviewSummary.recentReviews.length === 0 ? (
+              {reviewsList.length === 0 ? (
                 <p className="text-muted">There are no reviews written for this coffee yet.</p>
               ) : (
                 <div className="product-detail-custom__review-cards">
-                  {reviewSummary.recentReviews.map((rev) => (
+                  {reviewsList.map((rev) => (
                     <div key={rev.id} className="product-detail-custom__review-card">
                       <div className="product-detail-custom__review-header">
                         <StarRating rating={rev.rating} small />
-                        <span className="text-xs text-muted">{new Date(rev.createdAt).toLocaleDateString('en-IN')}</span>
+                        <span className="text-xs text-muted">
+                          {new Date(rev.createdAt).toLocaleDateString('en-IN')}
+                          {!rev.isApproved && (
+                            <span style={{ marginLeft: '0.5rem', color: 'var(--accent-amber)', fontSize: '0.75rem', fontWeight: 'bold' }}>
+                              (Pending Moderation)
+                            </span>
+                          )}
+                        </span>
                       </div>
                       <h5 className="product-detail-custom__review-title">{rev.title || 'Incredible Taste!'}</h5>
                       <p className="product-detail-custom__review-body">{rev.body || 'This is by far the smoothest and most refreshing coffee I have had.'}</p>
@@ -342,6 +434,90 @@ export default function ProductDetailPage() {
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+            </div>
+
+            {/* Write a Review Form */}
+            <div className="product-detail-custom__write-review">
+              <h4 className="heading-3 text-cream">Write a Review</h4>
+              {submitSuccess ? (
+                <div className="review-submit-success-card">
+                  <CheckCircle2 size={20} style={{ color: '#95d5b2', flexShrink: 0, marginTop: '0.15rem' }} />
+                  <div>
+                    <h5 style={{ fontWeight: 'bold', color: 'var(--text-cream)', margin: '0 0 0.25rem 0' }}>Review Submitted!</h5>
+                    <p className="text-sm text-muted" style={{ margin: 0 }}>
+                      Thank you for your feedback. Your review has been sent for moderation and will appear once approved.
+                    </p>
+                  </div>
+                </div>
+              ) : isLoggedIn ? (
+                <form onSubmit={handleSubmitReview} className="product-detail-custom__review-form">
+                  {submitError && <p className="text-sm" style={{ color: '#f08080', marginBottom: '1rem' }}>{submitError}</p>}
+                  
+                  <div className="review-form-group">
+                    <label className="text-xs text-muted" style={{ fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.25rem', display: 'block' }}>Rating</label>
+                    <div style={{ display: 'flex', gap: '0.25rem' }}>
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setRating(star)}
+                          onMouseEnter={() => setHoverRating(star)}
+                          onMouseLeave={() => setHoverRating(0)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                        >
+                          <Star 
+                            size={20} 
+                            fill={(hoverRating || rating) >= star ? 'var(--accent-amber)' : 'none'} 
+                            color={(hoverRating || rating) >= star ? 'var(--accent-amber)' : 'var(--text-muted)'} 
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="review-form-group" style={{ marginTop: '1rem' }}>
+                    <label className="text-xs text-muted" style={{ fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.25rem', display: 'block' }}>Review Title</label>
+                    <input 
+                      type="text" 
+                      required 
+                      value={reviewTitle} 
+                      onChange={e => setReviewTitle(e.target.value)} 
+                      placeholder="Excellent flavour! Highly recommended."
+                      className="input"
+                      style={{ width: '100%', background: 'rgba(253,224,193,0.03)', border: '1px solid var(--border-subtle)', color: 'var(--text-cream)', padding: '0.55rem 0.75rem', borderRadius: '6px' }}
+                    />
+                  </div>
+
+                  <div className="review-form-group" style={{ marginTop: '1rem' }}>
+                    <label className="text-xs text-muted" style={{ fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.25rem', display: 'block' }}>Review Comment</label>
+                    <textarea 
+                      required 
+                      rows={4}
+                      value={reviewBody} 
+                      onChange={e => setReviewBody(e.target.value)} 
+                      placeholder="Write your detailed experience here..."
+                      className="input"
+                      style={{ width: '100%', background: 'rgba(253,224,193,0.03)', border: '1px solid var(--border-subtle)', color: 'var(--text-cream)', resize: 'vertical', padding: '0.55rem 0.75rem', borderRadius: '6px' }}
+                    />
+                  </div>
+
+                  <button 
+                    type="submit" 
+                    disabled={isSubmitting} 
+                    className="btn btn-primary"
+                    style={{ marginTop: '1.25rem', padding: '0.625rem 2rem', fontSize: '0.875rem' }}
+                  >
+                    {isSubmitting ? 'Submitting...' : 'Submit Review'}
+                  </button>
+                </form>
+              ) : (
+                <div className="review-form-login-prompt">
+                  <p className="text-sm text-muted" style={{ marginBottom: '1rem' }}>You must be signed in to submit a review.</p>
+                  <Link to="/auth" className="btn btn-outline btn-sm" style={{ textDecoration: 'none', display: 'inline-block' }}>
+                    Sign In to Review
+                  </Link>
                 </div>
               )}
             </div>

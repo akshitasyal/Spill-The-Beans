@@ -23,13 +23,17 @@ enum UserRole {
 }
 
 enum OrderStatus {
+  PLACED
+  PACKED
+  ROASTED
+  DISPATCHED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
   PENDING
   CONFIRMED
   PROCESSING
   SHIPPED
-  OUT_FOR_DELIVERY
-  DELIVERED
-  CANCELLED
   REFUNDED
 }
 
@@ -137,9 +141,11 @@ model Product {
   wishlist   Wishlist[]
   orderItems OrderItem[]
   reviews    Review[]
+  inventoryLogs InventoryLog[]
 
   @@map("products")
 }
+
 
 // ─────────────────────────────────────────────────────────────
 // CART
@@ -220,30 +226,74 @@ model Address {
 // ─────────────────────────────────────────────────────────────
 
 model Order {
-  id            String        @id @default(cuid())
-  userId        String        @map("user_id")
-  addressId     String        @map("address_id")
-  status        OrderStatus   @default(PENDING)
-  paymentMethod PaymentMethod @map("payment_method")
-  paymentStatus PaymentStatus @default(PENDING) @map("payment_status")
-  couponId      String?       @map("coupon_id")
-  subtotal      Int           // in paise
-  discount      Int           @default(0)
-  shippingFee   Int           @default(0) @map("shipping_fee")
-  total         Int           // in paise
-  trackingId    String?       @map("tracking_id")
-  notes         String?
-  createdAt     DateTime      @default(now()) @map("created_at")
-  updatedAt     DateTime      @updatedAt @map("updated_at")
+  id                String        @id @default(cuid())
+  userId            String        @map("user_id")
+  addressId         String        @map("address_id")
+  status            OrderStatus   @default(PLACED)
+  paymentMethod     PaymentMethod @map("payment_method")
+  paymentStatus     PaymentStatus @default(PENDING) @map("payment_status")
+  couponId          String?       @map("coupon_id")
+  subtotal          Int           // in paise
+  discount          Int           @default(0)
+  shippingFee       Int           @default(0) @map("shipping_fee")
+  total             Int           // in paise
+  trackingId        String?       @map("tracking_id")
+  courierPartner    String?       @map("courier_partner")
+  estimatedDelivery DateTime?     @map("estimated_delivery")
+  notes             String?
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
 
   // Relations
-  user    User        @relation(fields: [userId], references: [id])
-  address Address     @relation(fields: [addressId], references: [id])
-  coupon  Coupon?     @relation(fields: [couponId], references: [id])
-  items   OrderItem[]
-  payment Payment?
+  user           User            @relation(fields: [userId], references: [id])
+  address        Address         @relation(fields: [addressId], references: [id])
+  coupon         Coupon?         @relation(fields: [couponId], references: [id])
+  items          OrderItem[]
+  payment        Payment?
+  trackingEvents TrackingEvent[]
+  auditLogs      OrderAuditLog[]
 
   @@map("orders")
+}
+
+// ─────────────────────────────────────────────────────────────
+// TRACKING EVENT
+// ─────────────────────────────────────────────────────────────
+
+model TrackingEvent {
+  id             String      @id @default(cuid())
+  orderId        String      @map("order_id")
+  status         OrderStatus
+  message        String?
+  updatedBy      String      @default("System") @map("updated_by")
+  courierPartner String?     @map("courier_partner")
+  trackingNumber String?     @map("tracking_number")
+  createdAt      DateTime    @default(now()) @map("created_at")
+
+  // Relations
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("tracking_events")
+}
+
+// ─────────────────────────────────────────────────────────────
+// ORDER AUDIT LOG
+// ─────────────────────────────────────────────────────────────
+
+model OrderAuditLog {
+  id         String       @id @default(cuid())
+  orderId    String       @map("order_id")
+  actorName  String       @map("actor_name")
+  action     String
+  fromStatus OrderStatus? @map("from_status")
+  toStatus   OrderStatus? @map("to_status")
+  details    String?
+  createdAt  DateTime     @default(now()) @map("created_at")
+
+  // Relations
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("order_audit_logs")
 }
 
 model OrderItem {
@@ -333,3 +383,69 @@ model Review {
   @@unique([userId, productId])
   @@map("reviews")
 }
+
+// ─────────────────────────────────────────────────────────────
+// NOTIFICATION
+// ─────────────────────────────────────────────────────────────
+
+enum NotificationType {
+  LOW_STOCK
+  NEW_ORDER
+  FAILED_PAYMENT
+  NEW_REVIEW
+  COUPON_EXPIRY
+  NEWSLETTER_SIGNUP
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  type      NotificationType
+  message   String
+  isRead    Boolean          @default(false) @map("is_read")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  @@map("notifications")
+}
+
+// ─────────────────────────────────────────────────────────────
+// NEWSLETTER SUBSCRIBER
+// ─────────────────────────────────────────────────────────────
+
+enum SubscriberStatus {
+  SUBSCRIBED
+  UNSUBSCRIBED
+}
+
+model NewsletterSubscriber {
+  id            String           @id @default(cuid())
+  email         String           @unique
+  name          String?
+  status        SubscriberStatus @default(SUBSCRIBED)
+  source        String?          // e.g. "Website Popup", "Checkout Opt-in"
+  subscribedAt  DateTime         @default(now()) @map("subscribed_at")
+  lastEmailSentAt DateTime?      @map("last_email_sent_at")
+
+  @@map("newsletter_subscribers")
+}
+
+// ─────────────────────────────────────────────────────────────
+// INVENTORY LOG
+// ─────────────────────────────────────────────────────────────
+
+model InventoryLog {
+  id            String   @id @default(cuid())
+  productId     String   @map("product_id")
+  productName   String   @map("product_name")
+  change        Int      // positive = restock, negative = sale/deduction
+  previousStock Int      @map("previous_stock")
+  newStock      Int      @map("new_stock")
+  reason        String
+  admin         String   @default("System")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  // Relations
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("inventory_logs")
+}
+

@@ -8,6 +8,8 @@ import PageWrapper from '../components/PageWrapper';
 import { CouponService } from '../services/CouponService';
 import './Cart.css';
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+
 export default function Cart() {
   const { items, removeItem, updateQuantity, subtotal, savings, clearCart } = useCart();
   const { formatPrice } = useCurrency();
@@ -30,8 +32,10 @@ export default function Cart() {
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
   const [pincode, setPincode] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('RAZORPAY');
+  const [paymentMethod, setPaymentMethod] = useState('UPI');
   const [validationError, setValidationError] = useState('');
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const [orderError, setOrderError] = useState('');
 
   // Auto-fill address details if user is logged in
   useEffect(() => {
@@ -85,115 +89,125 @@ export default function Cart() {
     }
   };
 
-  const handleConfirmOrder = () => {
+  const handleConfirmOrder = async () => {
     if (!email || !fullName || !phone || !line1 || !city || !state || !pincode) {
       setValidationError('Please fill out all required fields.');
       return;
     }
     setValidationError('');
+    setOrderError('');
+    setIsPlacingOrder(true);
 
-    const idNum = Math.floor(Math.random() * 90000) + 10000;
-    const orderId = `IMP${idNum}`;
-    setPlacedOrderId(orderId);
+    try {
+      // Call the backend to create a real DB order
+      const clerkId = user?.clerkId || user?.id;
+      const headers = { 'Content-Type': 'application/json' };
+      if (clerkId) headers['x-clerk-id'] = clerkId;
 
-    const fullAddress = `${line1}${line2 ? ', ' + line2 : ''}, ${city}, ${state} - ${pincode}`;
-
-    // Save to tracking database in localStorage
-    const savedOrders = JSON.parse(localStorage.getItem('stb_placed_orders') || '{}');
-    savedOrders[orderId] = {
-      id: orderId,
-      status: 'CONFIRMED',
-      courier: 'Delhivery',
-      trackingNumber: `DEL${Math.floor(Math.random() * 90000000) + 10000000}`,
-      estimatedDelivery: new Date(Date.now() + 3600000 * 24 * 3).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
-      address: fullAddress,
-      userId: user?.email || email,
-      userEmail: user?.email || email,
-      steps: [
-        { label: 'Order Placed', time: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) + ', ' + new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }), done: true },
-        { label: 'Processing & Roasting', time: 'Pending', done: false },
-        { label: 'Dispatched from Warehouse', time: 'Pending', done: false },
-        { label: 'Out for Delivery', time: 'Pending', done: false },
-        { label: 'Delivered', time: 'Pending', done: false },
-      ]
-    };
-    localStorage.setItem('stb_placed_orders', JSON.stringify(savedOrders));
-
-    // Save to admin orders database in localStorage so it appears in the Admin Portal live updates
-    const adminOrders = JSON.parse(localStorage.getItem('stb_admin_detailed_orders') || '[]');
-    const adminOrder = {
-      id: orderId,
-      userId: user?.email || email,
-      customerName: fullName,
-      customerEmail: email,
-      customerPhone: phone,
-      address: {
+      const payload = {
+        userEmail: user?.email || email,
+        name: fullName,
+        phone,
         line1,
         line2,
         city,
         state,
-        pincode
-      },
-      status: 'CONFIRMED',
-      paymentMethod,
-      paymentStatus: paymentMethod === 'COD' ? 'PENDING' : 'PAID',
-      subtotal: subtotal * 100, // in paise
-      discount: discountAmount * 100, // in paise
-      shippingFee: shipping * 100, // in paise
-      tax: Math.round(subtotal * 0.18 * 100),
-      total: total * 100,
-      trackingId: null,
-      courierPartner: null,
-      shippingDate: null,
-      estimatedDelivery: new Date(Date.now() + 3600000 * 24 * 3).toISOString(),
-      deliveryDate: null,
-      transactionId: paymentMethod === 'COD' ? null : `TXN-${Math.floor(Math.random() * 900000000 + 100000000)}`,
-      notes: '',
-      items: items.map(item => ({
-        id: item.id,
-        name: item.name,
-        price: item.price * 100,
-        quantity: item.quantity,
-        image: item.image,
-        weight: item.weight
-      })),
-      timeline: {
-        placed: new Date().toISOString(),
-        confirmed: paymentMethod === 'COD' ? null : new Date().toISOString(),
-        processing: null,
-        packed: null,
-        shipped: null,
-        delivered: null
-      },
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    adminOrders.unshift(adminOrder);
-    localStorage.setItem('stb_admin_detailed_orders', JSON.stringify(adminOrders));
+        pincode,
+        paymentMethod,
+        couponCode: promoApplied?.code || undefined,
+        items: items.map(item => ({
+          slug: item.slug,
+          name: item.name,
+          image: typeof item.image === 'string' ? item.image : '',
+          price: item.price,
+          quantity: item.quantity,
+          variant: item.variant || null,
+        })),
+      };
 
-    // Also save this address to user's saved addresses in profile if not already exists!
-    if (user) {
-      const allAddresses = JSON.parse(localStorage.getItem('stb_saved_addresses') || '[]');
-      const addrExists = allAddresses.some(a => a.userEmail === user.email && a.line1 === line1 && a.pincode === pincode);
-      if (!addrExists) {
-        allAddresses.push({
-          id: `addr-${Date.now()}`,
-          userEmail: user.email,
-          name: fullName,
-          phone,
-          line1,
-          line2,
-          city,
-          state,
-          pincode,
-          isDefault: allAddresses.filter(a => a.userEmail === user.email).length === 0
+      let orderId;
+
+      const userEmailForOrder = user?.email || email;
+
+      if (userEmailForOrder) {
+        // Logged-in user (or has email): persist to DB
+        const res = await fetch(`${API_BASE}/api/orders/checkout-direct`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(payload),
         });
-        localStorage.setItem('stb_saved_addresses', JSON.stringify(allAddresses));
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.message || 'Failed to place order. Please try again.');
+        }
+        orderId = data.data?.id || `IMP${Math.floor(Math.random() * 90000) + 10000}`;
+      } else {
+        // Guest with no email: generate a local order ID
+        orderId = `IMP${Math.floor(Math.random() * 90000) + 10000}`;
       }
-    }
 
-    setCheckoutStep('success');
-    clearCart();
+      setPlacedOrderId(orderId);
+
+      const fullAddress = `${line1}${line2 ? ', ' + line2 : ''}, ${city}, ${state} - ${pincode}`;
+
+      // Save to localStorage for tracking page
+      const savedOrders = JSON.parse(localStorage.getItem('stb_placed_orders') || '{}');
+      savedOrders[orderId] = {
+        id: orderId,
+        status: 'CONFIRMED',
+        courier: 'Delhivery',
+        trackingNumber: `DEL${Math.floor(Math.random() * 90000000) + 10000000}`,
+        estimatedDelivery: new Date(Date.now() + 3600000 * 24 * 3).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
+        address: fullAddress,
+        userId: user?.email || email,
+        userEmail: user?.email || email,
+        items: items.map(item => ({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          image: typeof item.image === 'string' ? item.image : '',
+          weight: item.weight
+        })),
+        total: total,
+        steps: [
+          { label: 'Order Placed', time: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) + ', ' + new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }), done: true },
+          { label: 'Processing & Roasting', time: 'Pending', done: false },
+          { label: 'Dispatched from Warehouse', time: 'Pending', done: false },
+          { label: 'Out for Delivery', time: 'Pending', done: false },
+          { label: 'Delivered', time: 'Pending', done: false },
+        ]
+      };
+      localStorage.setItem('stb_placed_orders', JSON.stringify(savedOrders));
+
+      // Also save address for logged-in users
+      if (user) {
+        const allAddresses = JSON.parse(localStorage.getItem('stb_saved_addresses') || '[]');
+        const addrExists = allAddresses.some(a => a.userEmail === user.email && a.line1 === line1 && a.pincode === pincode);
+        if (!addrExists) {
+          allAddresses.push({
+            id: `addr-${Date.now()}`,
+            userEmail: user.email,
+            name: fullName,
+            phone,
+            line1,
+            line2,
+            city,
+            state,
+            pincode,
+            isDefault: allAddresses.filter(a => a.userEmail === user.email).length === 0
+          });
+          localStorage.setItem('stb_saved_addresses', JSON.stringify(allAddresses));
+        }
+      }
+
+      setCheckoutStep('success');
+      clearCart();
+    } catch (err) {
+      setOrderError(err.message || 'Something went wrong. Please try again.');
+    } finally {
+      setIsPlacingOrder(false);
+    }
   };
 
   if (checkoutStep === 'success') {
@@ -342,22 +356,16 @@ export default function Cart() {
                 <h2 className="checkout-section-title" style={{ marginTop: '1.5rem' }}>Payment Method</h2>
                 <div className="payment-selector-grid">
                   <div 
-                    className={`payment-option-card ${paymentMethod === 'RAZORPAY' ? 'payment-option-card--active' : ''}`}
-                    onClick={() => setPaymentMethod('RAZORPAY')}
+                    className={`payment-option-card ${paymentMethod === 'UPI' ? 'payment-option-card--active' : ''}`}
+                    onClick={() => setPaymentMethod('UPI')}
                   >
-                    Razorpay
+                    UPI / QR Code
                   </div>
                   <div 
                     className={`payment-option-card ${paymentMethod === 'STRIPE' ? 'payment-option-card--active' : ''}`}
                     onClick={() => setPaymentMethod('STRIPE')}
                   >
-                    Stripe
-                  </div>
-                  <div 
-                    className={`payment-option-card ${paymentMethod === 'UPI' ? 'payment-option-card--active' : ''}`}
-                    onClick={() => setPaymentMethod('UPI')}
-                  >
-                    UPI / QR Code
+                    Stripe / Card
                   </div>
                   <div 
                     className={`payment-option-card ${paymentMethod === 'COD' ? 'payment-option-card--active' : ''}`}
@@ -526,18 +534,26 @@ export default function Cart() {
                   </button>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    {orderError && (
+                      <div className="checkout-validation-error" style={{ color: '#f08080' }}>
+                        {orderError}
+                      </div>
+                    )}
                     <button
                       id="cart-confirm-order-btn"
                       className="btn btn-primary w-full"
-                      style={{ justifyContent: 'center' }}
+                      style={{ justifyContent: 'center', opacity: isPlacingOrder ? 0.7 : 1 }}
                       onClick={handleConfirmOrder}
+                      disabled={isPlacingOrder}
                     >
-                      Confirm and Pay {formatPrice(total)} <ArrowRight size={16} />
+                      {isPlacingOrder ? 'Placing Order…' : `Confirm and Pay ${formatPrice(total)}`}
+                      {!isPlacingOrder && <ArrowRight size={16} />}
                     </button>
                     <button
                       type="button"
                       className="checkout-back-link"
                       onClick={() => setCheckoutStep('cart')}
+                      disabled={isPlacingOrder}
                     >
                       <ArrowLeft size={14} /> Back to Cart
                     </button>

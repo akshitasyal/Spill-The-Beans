@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Mail, ArrowRight, CheckCircle } from 'lucide-react';
 import { useScrollAnimation } from '../hooks/useScrollAnimation';
+import { NotificationService } from '../services/NotificationService';
 import './NewsletterSection.css';
 
 export default function NewsletterSection() {
@@ -12,6 +13,24 @@ export default function NewsletterSection() {
     e.preventDefault();
     if (!email.includes('@')) return;
     setStatus('loading');
+    
+    try {
+      // Save subscriber to admin subscribers list
+      const subscribers = JSON.parse(localStorage.getItem('stb_admin_newsletter') || '[]');
+      if (!subscribers.includes(email)) {
+        subscribers.unshift(email);
+        localStorage.setItem('stb_admin_newsletter', JSON.stringify(subscribers));
+      }
+      
+      // Trigger subscriber notification
+      NotificationService.createNotification(
+        'NEWSLETTER_SIGNUP',
+        `New newsletter subscription from ${email}`
+      );
+    } catch (err) {
+      console.error('Error handling newsletter signup notification:', err);
+    }
+
     setTimeout(() => {
       setStatus('success');
       setEmail('');

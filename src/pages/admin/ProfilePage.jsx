@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useUser, useClerk } from '@clerk/clerk-react';
 import { SectionHeader } from './AdminLayout';
-import { User, Mail, Lock, Shield, Camera, Save, ExternalLink } from 'lucide-react';
+import { User, Lock, Shield, Camera, Save, ExternalLink } from 'lucide-react';
 
 const isClerkEnabled = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 

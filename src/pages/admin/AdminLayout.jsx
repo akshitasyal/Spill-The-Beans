@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useUser, useClerk } from '@clerk/clerk-react';
 import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard, Package, Layers, ShoppingBag, Users, MessageSquare,
   Ticket, FileText, BarChart3, Settings, LogOut, Menu, X, ChevronLeft,
-  ChevronRight, Search, Bell, Moon, Sun, Plus, User, Mail, Activity, UserCircle
+  ChevronRight, Search, Bell, Moon, Sun, Plus, User, Activity, UserCircle
 } from 'lucide-react';
 import './AdminLayout.css';
 import SearchModal from '../../components/admin/SearchModal';
@@ -118,10 +118,8 @@ function AdminSidebar({ collapsed, setCollapsed, mobileOpen, setMobileOpen, onLo
 
 function AdminNavbar({ setMobileOpen, onLogout, onOpenSearch, unreadCount, clerkUser, mockUser }) {
   const [profileOpen, setProfileOpen] = useState(false);
-  const [notifOpen, setNotifOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(true);
   const profileRef = useRef(null);
-  const notifRef = useRef(null);
   const navigate = useNavigate();
 
   // Handle dropdown closes on clicking outside
@@ -129,9 +127,6 @@ function AdminNavbar({ setMobileOpen, onLogout, onOpenSearch, unreadCount, clerk
     function handleClickOutside(e) {
       if (profileRef.current && !profileRef.current.contains(e.target)) {
         setProfileOpen(false);
-      }
-      if (notifRef.current && !notifRef.current.contains(e.target)) {
-        setNotifOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);

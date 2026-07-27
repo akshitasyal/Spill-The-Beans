@@ -66,7 +66,6 @@ export default function Contact() {
   const [sending, setSending] = useState(false);
   const [errors, setErrors] = useState({});
 
-  const heroRef = useRef(null);
   const cardsRef = useRef(null);
   const formRef = useRef(null);
   const [heroVisible, setHeroVisible] = useState(false);

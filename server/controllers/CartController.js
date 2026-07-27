@@ -44,7 +44,7 @@ export const CartController = {
       const userId = await resolveUserId(clerkId);
       const { productId, quantity, variant } = req.body;
 
-      const item = await CartRepository.addItem(userId, { productId, quantity, variant });
+      await CartRepository.addItem(userId, { productId, quantity, variant });
       const cart = await CartRepository.getOrCreateCart(userId);
 
       res.status(201).json({ success: true, data: cart, message: 'Item added to cart.' });

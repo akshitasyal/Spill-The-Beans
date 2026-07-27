@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { AnalyticsService } from '../../services/AnalyticsService';
 import { SectionHeader } from './AdminLayout';
 import { RefreshCw, Download, TrendingUp, ShoppingBag, Users, CreditCard, Percent, ArrowUpRight, Package, Star } from 'lucide-react';
@@ -40,7 +40,7 @@ function SvgLineChart({ data, valueKey, color = '#c27a0a', height = 140 }) {
         <circle key={i} cx={p.x} cy={p.y} r="3" fill={color} opacity="0.7" />
       ))}
       {/* x-axis labels — every 3rd */}
-      {data.filter((_, i) => i % Math.ceil(data.length / 6) === 0).map((d, i, arr) => {
+      {data.filter((_, i) => i % Math.ceil(data.length / 6) === 0).map((d, i) => {
         const origIdx = data.indexOf(d);
         return (
           <text key={i} x={points[origIdx]?.x || 0} y={H - 4} fontSize="9" fill="#7b6e63" textAnchor="middle">
@@ -69,7 +69,6 @@ function SvgBarChart({ data, valueKey, color = '#c27a0a', height = 140 }) {
         const barH = (v / max) * innerH;
         const x = pad.left + (i / values.length) * innerW + 1;
         const y = pad.top + innerH - barH;
-        const d = data[i];
         return (
           <rect key={i} x={x} y={y} width={barW} height={barH}
             fill={color} opacity="0.75" rx="2" />
@@ -93,14 +92,12 @@ function SvgDonutChart({ data, height = 140 }) {
   const COLORS = ['#c27a0a', '#3b82f6', '#10b981', '#8b5cf6', '#f97316', '#ec4899'];
   const total = data.reduce((s, d) => s + d.value, 0) || 1;
   const cx = 70, cy = 70, r = 50, ri = 32;
-  let angle = -90;
 
-  const arcs = data.slice(0, 6).map((d, i) => {
+  const arcs = data.slice(0, 6).reduce((acc, d, i) => {
     const pct = d.value / total;
     const sweep = pct * 360;
-    const startAngle = angle;
-    angle += sweep;
-    const endAngle = angle;
+    const startAngle = acc.angle;
+    const endAngle = startAngle + sweep;
     const toRad = a => (a * Math.PI) / 180;
     const x1 = cx + r * Math.cos(toRad(startAngle));
     const y1 = cy + r * Math.sin(toRad(startAngle));
@@ -111,8 +108,9 @@ function SvgDonutChart({ data, height = 140 }) {
     const xi2 = cx + ri * Math.cos(toRad(endAngle));
     const yi2 = cy + ri * Math.sin(toRad(endAngle));
     const large = sweep > 180 ? 1 : 0;
-    return { d: `M${x1.toFixed(2)},${y1.toFixed(2)} A${r},${r} 0 ${large},1 ${x2.toFixed(2)},${y2.toFixed(2)} L${xi2.toFixed(2)},${yi2.toFixed(2)} A${ri},${ri} 0 ${large},0 ${xi1.toFixed(2)},${yi1.toFixed(2)} Z`, color: COLORS[i], name: d.name, pct: Math.round(pct * 100) };
-  });
+    const arc = { d: `M${x1.toFixed(2)},${y1.toFixed(2)} A${r},${r} 0 ${large},1 ${x2.toFixed(2)},${y2.toFixed(2)} L${xi2.toFixed(2)},${yi2.toFixed(2)} A${ri},${ri} 0 ${large},0 ${xi1.toFixed(2)},${yi1.toFixed(2)} Z`, color: COLORS[i], name: d.name, pct: Math.round(pct * 100) };
+    return { angle: endAngle, arcs: [...acc.arcs, arc] };
+  }, { angle: -90, arcs: [] }).arcs;
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
@@ -160,12 +158,6 @@ export default function AnalyticsPage() {
   const [range, setRange] = useState('monthly');
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchData = useCallback(() => {
-    AnalyticsService.getAnalytics().then(res => {
-      if (res.success) setData(res.data);
-      setLoading(false);
-    });
-  }, []);
 
   useEffect(() => {
     let active = true;
@@ -195,16 +187,58 @@ export default function AnalyticsPage() {
 
   if (loading) return <SkeletonPage />;
 
+  const isDaily = range === 'daily';
+  const isYearly = range === 'yearly';
+
+  const chartData = isDaily ? (data?.daily || []) : (data?.months || []);
+
   const lastMonth = data?.months?.[data.months.length - 1] || {};
   const prevMonth = data?.months?.[data.months.length - 2] || {};
-  const totalRevenue = data?.months?.reduce((s, m) => s + m.revenue, 0) || 0;
-  const totalOrders = data?.months?.reduce((s, m) => s + m.orders, 0) || 0;
+  const totalRevenue12m = data?.months?.reduce((s, m) => s + m.revenue, 0) || 0;
+  const totalOrders12m = data?.months?.reduce((s, m) => s + m.orders, 0) || 0;
   const totalCustomers = data?.months?.[data.months.length - 1]?.customers || 0;
 
   const revenueChange = prevMonth.revenue ? Math.round((lastMonth.revenue - prevMonth.revenue) / prevMonth.revenue * 100) : 0;
   const ordersChange = prevMonth.orders ? Math.round((lastMonth.orders - prevMonth.orders) / prevMonth.orders * 100) : 0;
 
-  const chartData = range === 'daily' ? data?.daily : data?.months;
+  let currentRevenue = 0;
+  let currentOrders = 0;
+  let currentAOV = 0;
+  let periodLabel = 'This Month';
+
+  if (isDaily) {
+    periodLabel = 'Today';
+    const today = data?.daily?.[data.daily.length - 1] || {};
+    currentRevenue = today.revenue || 0;
+    currentOrders = today.orders || 0;
+    currentAOV = currentOrders > 0 ? Math.round(currentRevenue / currentOrders) : 0;
+  } else if (isYearly) {
+    periodLabel = 'Last 12m';
+    currentRevenue = totalRevenue12m;
+    currentOrders = totalOrders12m;
+    currentAOV = currentOrders > 0 ? Math.round(currentRevenue / currentOrders) : 0;
+  } else {
+    periodLabel = 'This Month';
+    currentRevenue = lastMonth.revenue || 0;
+    currentOrders = lastMonth.orders || 0;
+    currentAOV = lastMonth.avgOrderValue || (currentOrders > 0 ? Math.round(currentRevenue / currentOrders) : 0);
+  }
+
+  const fmtAmt = (val) => {
+    if (!val) return '0';
+    const n = Number(val);
+    const rupees = n > 100000 ? n / 100 : n;
+    return Math.round(rupees).toLocaleString('en-IN');
+  };
+
+  const todayRev = data?.daily?.[data.daily.length - 1]?.revenue || 0;
+  const yestRev = data?.daily?.[data.daily.length - 2]?.revenue || 0;
+  const todayChange = yestRev > 0 ? Math.round(((todayRev - yestRev) / yestRev) * 100) : (todayRev > 0 ? 100 : 0);
+
+  const newCustCount = lastMonth.newCustomers || 0;
+  const totalSystemOrdersCount = data?.months?.reduce((s, m) => s + m.orders, 0) || 0;
+  const totalReturnsCount = data?.months?.reduce((s, m) => s + (m.returns || 0), 0) || 0;
+  const realReturnRate = totalSystemOrdersCount > 0 ? `${((totalReturnsCount / totalSystemOrdersCount) * 100).toFixed(1)}%` : '0%';
 
   return (
     <div>
@@ -231,13 +265,13 @@ export default function AnalyticsPage() {
 
       {/* KPI Cards */}
       <div style={kpiGrid}>
-        <KPICard icon={<TrendingUp size={18} />} label="Total Revenue (12m)" value={`₹${(totalRevenue / 100).toLocaleString()}`} change={revenueChange} changeLabel="vs last month" color="#c27a0a" />
-        <KPICard icon={<ShoppingBag size={18} />} label="Total Orders (12m)" value={totalOrders.toLocaleString()} change={ordersChange} changeLabel="vs last month" color="#3b82f6" />
-        <KPICard icon={<Users size={18} />} label="Active Customers" value={totalCustomers.toLocaleString()} change={8} changeLabel="new this month" color="#10b981" />
-        <KPICard icon={<CreditCard size={18} />} label="Avg Order Value" value={`₹${((lastMonth.avgOrderValue || 0) / 100).toFixed(0)}`} change={4} changeLabel="vs last month" color="#8b5cf6" />
-        <KPICard icon={<Percent size={18} />} label="Today's Revenue" value={`₹${((data?.daily?.[data.daily.length - 1]?.revenue || 0) / 100).toFixed(0)}`} change={12} changeLabel="vs yesterday" color="#f97316" />
-        <KPICard icon={<Star size={18} />} label="Conversion Rate" value="3.8%" change={0.4} changeLabel="vs last month" color="#ec4899" />
-        <KPICard icon={<Package size={18} />} label="Return Rate" value="1.2%" change={-0.3} changeLabel="vs last month" color="#ef4444" />
+        <KPICard icon={<TrendingUp size={18} />} label={`Total Revenue (${periodLabel})`} value={`₹${fmtAmt(currentRevenue)}`} change={revenueChange} changeLabel="vs previous period" color="#c27a0a" />
+        <KPICard icon={<ShoppingBag size={18} />} label={`Total Orders (${periodLabel})`} value={currentOrders.toLocaleString('en-IN')} change={ordersChange} changeLabel="vs previous period" color="#3b82f6" />
+        <KPICard icon={<Users size={18} />} label="Active Customers" value={totalCustomers.toLocaleString('en-IN')} change={newCustCount} changeLabel="new this period" color="#10b981" />
+        <KPICard icon={<CreditCard size={18} />} label={`Avg Order Value (${periodLabel})`} value={`₹${fmtAmt(currentAOV)}`} change={revenueChange} changeLabel="vs previous period" color="#8b5cf6" />
+        <KPICard icon={<Percent size={18} />} label="Today's Revenue" value={`₹${fmtAmt(todayRev)}`} change={todayChange} changeLabel="vs yesterday" color="#f97316" />
+        <KPICard icon={<Star size={18} />} label="Conversion Rate" value={totalSystemOrdersCount > 0 ? "100%" : "0%"} change={0} changeLabel="completed checkout" color="#ec4899" />
+        <KPICard icon={<Package size={18} />} label="Return Rate" value={realReturnRate} change={0} changeLabel="returns / cancellations" color="#ef4444" />
         <KPICard icon={<ArrowUpRight size={18} />} label="Monthly Growth" value={`${revenueChange > 0 ? '+' : ''}${revenueChange}%`} change={revenueChange} changeLabel="revenue MoM" color="#14b8a6" />
       </div>
 

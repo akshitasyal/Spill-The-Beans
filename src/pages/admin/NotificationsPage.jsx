@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { NotificationService } from '../../services/NotificationService';
 import { SectionHeader } from './AdminLayout';
 import { Bell, Check, CheckCheck, Trash2, Filter } from 'lucide-react';
@@ -15,12 +15,6 @@ export default function NotificationsPage() {
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
 
-  const fetchNotifications = useCallback(() => {
-    NotificationService.getNotifications({ type: typeFilter, onlyUnread }).then(res => {
-      if (res.success) { setNotifications(res.data); setCurrentPage(1); }
-      setLoading(false);
-    });
-  }, [typeFilter, onlyUnread]);
 
   useEffect(() => {
     let active = true;

@@ -74,6 +74,8 @@ export default function BlogsPage() {
     setShowForm(true);
     setValidationErrors({});
     setGeneralError('');
+    // Scroll to top so the side-by-side form panel is immediately visible
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleCancel = () => {
@@ -167,9 +169,14 @@ export default function BlogsPage() {
         </div>
       )}
 
-      <div style={layoutGrid}>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: showForm ? 'minmax(0, 1fr) 380px' : '1fr',
+        gap: '1.5rem',
+        alignItems: 'start'
+      }}>
         {/* Left: Articles index table */}
-        <div className="recent-orders-card" style={{ flexGrow: 2, overflowX: 'auto' }}>
+        <div className="recent-orders-card" style={{ minWidth: 0, overflowX: 'auto' }}>
           {loading ? (
             <div style={{ padding: '2rem' }}>Loading blog catalog...</div>
           ) : blogs.length > 0 ? (
@@ -229,7 +236,7 @@ export default function BlogsPage() {
 
         {/* Right: Article creator panel */}
         {showForm && (
-          <div style={{ minWidth: '340px', flexGrow: 1 }}>
+          <div>
             <form onSubmit={handleSubmit} style={formCard}>
               <div style={formHeader}>
                 <h3 style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 600 }}>
@@ -349,13 +356,6 @@ const slugCode = {
   background: 'rgba(194, 122, 10, 0.05)',
   padding: '0.2rem 0.4rem',
   borderRadius: '4px'
-};
-
-const layoutGrid = {
-  display: 'flex',
-  gap: '1.5rem',
-  alignItems: 'start',
-  flexWrap: 'wrap'
 };
 
 const actionsRow = {

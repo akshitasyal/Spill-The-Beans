@@ -951,8 +951,40 @@ export const products = [
     }
 ];
 
-export const getFeaturedProducts = () => products.filter(p => p.isBestseller).slice(0, 4);
-export const getProductBySlug = (slug) => products.find(p => p.slug === slug);
-export const getProductsByCategory = (category) => products.filter(p => p.category === category);
+
+// ── Deleted Products Registry ──────────────────────────────────────────────
+// Reads the `stb_deleted_slugs` key written by ProductService when an admin
+// deletes a product. Both the admin service and the storefront share this key
+// so a single delete propagates everywhere without touching source files.
+export function getDeletedSlugs() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem('stb_deleted_slugs') || '[]'));
+  } catch {
+    return new Set();
+  }
+}
+
+// Returns the full products array with any admin-deleted entries removed.
+export function getVisibleProducts() {
+  const deleted = getDeletedSlugs();
+  if (deleted.size === 0) return products;
+  return products.filter(p => !deleted.has(p.slug));
+}
+
+// ── Storefront Helper Functions ────────────────────────────────────────────
+export const getFeaturedProducts = () =>
+  getVisibleProducts().filter(p => p.isBestseller).slice(0, 4);
+
+export const getProductBySlug = (slug) => {
+  const deleted = getDeletedSlugs();
+  if (deleted.has(slug)) return null;
+  return products.find(p => p.slug === slug);
+};
+
+export const getProductsByCategory = (category) =>
+  getVisibleProducts().filter(p => p.category === category);
+
 export const getRelatedProducts = (product, count = 3) =>
-  products.filter(p => p.category === product.category && p.id !== product.id).slice(0, count);
+  getVisibleProducts()
+    .filter(p => p.category === product.category && p.id !== product.id)
+    .slice(0, count);

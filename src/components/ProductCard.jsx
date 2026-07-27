@@ -1,11 +1,9 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Heart } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { useCurrency } from '../context/CurrencyContext';
-import StarRating from './StarRating';
-import RoastBadge from './RoastBadge';
 import './ProductCard.css';
 
 export default function ProductCard({ product, layout = 'grid' }) {
@@ -20,9 +18,9 @@ export default function ProductCard({ product, layout = 'grid' }) {
     e.stopPropagation();
     setAdding(true);
     addItem(product);
+    toggleDrawer(true);
     setTimeout(() => {
       setAdding(false);
-      toggleDrawer(true);
     }, 500);
   };
 

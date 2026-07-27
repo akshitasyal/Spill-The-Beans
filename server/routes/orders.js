@@ -8,9 +8,10 @@ import { placeOrderSchema, updateOrderStatusSchema } from '../validation/schemas
 
 const router = Router();
 
-router.post('/',                                              validate(placeOrderSchema), OrderController.placeOrder);
-router.get('/',                                              OrderController.getUserOrders);
-router.get('/:id',                                           OrderController.getOrder);
-router.patch('/:id/status', validate(updateOrderStatusSchema), OrderController.updateStatus);
+router.post('/checkout-direct', OrderController.checkoutDirect);
+router.post('/',                validate(placeOrderSchema), OrderController.placeOrder);
+router.get('/',                 OrderController.getUserOrders);
+router.get('/track/:id',        OrderController.trackOrder);
+router.get('/:id',              OrderController.getOrder);
 
 export default router;

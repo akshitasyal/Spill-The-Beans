@@ -1,5 +1,6 @@
 import React from 'react';
 import { CategoryDTO } from '../../types/product';
+import { useCurrency } from '../../context/CurrencyContext';
 import './ProductFilters.css';
 
 interface ProductFiltersProps {
@@ -23,9 +24,47 @@ export default function ProductFilters({
   onFilterChange,
   onClearFilters,
 }: ProductFiltersProps) {
-  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'minPrice' | 'maxPrice') => {
-    const val = e.target.value;
-    onFilterChange(type, val);
+  const { currency } = useCurrency();
+  const [minVal, setMinVal] = React.useState(activeMinPrice ? (parseFloat(activeMinPrice) * currency.rate).toFixed(2).replace(/\.00$/, '') : '');
+  const [maxVal, setMaxVal] = React.useState(activeMaxPrice ? (parseFloat(activeMaxPrice) * currency.rate).toFixed(2).replace(/\.00$/, '') : '');
+
+  const isEditingMin = React.useRef(false);
+  const isEditingMax = React.useRef(false);
+
+  React.useEffect(() => {
+    if (isEditingMin.current) {
+      isEditingMin.current = false;
+      return;
+    }
+    setMinVal(activeMinPrice ? (parseFloat(activeMinPrice) * currency.rate).toFixed(2).replace(/\.00$/, '') : '');
+  }, [activeMinPrice, currency.rate]);
+
+  React.useEffect(() => {
+    if (isEditingMax.current) {
+      isEditingMax.current = false;
+      return;
+    }
+    setMaxVal(activeMaxPrice ? (parseFloat(activeMaxPrice) * currency.rate).toFixed(2).replace(/\.00$/, '') : '');
+  }, [activeMaxPrice, currency.rate]);
+
+  const handleLocalPriceChange = (val: string, type: 'minPrice' | 'maxPrice') => {
+    if (type === 'minPrice') {
+      isEditingMin.current = true;
+      setMinVal(val);
+    } else {
+      isEditingMax.current = true;
+      setMaxVal(val);
+    }
+
+    if (!val) {
+      onFilterChange(type, '');
+    } else {
+      const numericVal = parseFloat(val);
+      if (!isNaN(numericVal)) {
+        const valInINR = (numericVal / currency.rate).toFixed(0);
+        onFilterChange(type, valInINR);
+      }
+    }
   };
 
   return (
@@ -64,27 +103,27 @@ export default function ProductFilters({
 
       {/* Price Range Filter */}
       <div className="product-filters__section">
-        <h4 className="product-filters__section-title">Price Range (INR)</h4>
+        <h4 className="product-filters__section-title">Price Range ({currency.code})</h4>
         <div className="product-filters__price-inputs">
           <div className="product-filters__price-field">
-            <span className="product-filters__currency">₹</span>
+            <span className="product-filters__currency">{currency.symbol.trim()}</span>
             <input
               type="number"
               placeholder="Min"
-              value={activeMinPrice}
-              onChange={(e) => handlePriceChange(e, 'minPrice')}
+              value={minVal}
+              onChange={(e) => handleLocalPriceChange(e.target.value, 'minPrice')}
               min="0"
               className="product-filters__price-input"
             />
           </div>
           <span className="product-filters__price-sep">to</span>
           <div className="product-filters__price-field">
-            <span className="product-filters__currency">₹</span>
+            <span className="product-filters__currency">{currency.symbol.trim()}</span>
             <input
               type="number"
               placeholder="Max"
-              value={activeMaxPrice}
-              onChange={(e) => handlePriceChange(e, 'maxPrice')}
+              value={maxVal}
+              onChange={(e) => handleLocalPriceChange(e.target.value, 'maxPrice')}
               min="0"
               className="product-filters__price-input"
             />

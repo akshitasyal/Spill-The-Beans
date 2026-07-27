@@ -2,9 +2,10 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { ChevronDown, Coffee, ShoppingBag, LayoutGrid, Droplets } from 'lucide-react';
-import { products, CATEGORIES } from '../data/products';
+import { getVisibleProducts, CATEGORIES } from '../data/products';
 import ProductCard from '../components/ProductCard';
 import PageWrapper from '../components/PageWrapper';
+import { useCurrency } from '../context/CurrencyContext';
 import './Shop.css';
 
 const SORT_OPTIONS = [
@@ -15,12 +16,6 @@ const SORT_OPTIONS = [
   { value: 'newest', label: 'Newest First' },
 ];
 
-const PRICE_OPTIONS = [
-  { value: '', label: 'All Prices' },
-  { value: 'under-400', label: 'Under ₹400' },
-  { value: '400-800', label: '₹400 – ₹800' },
-  { value: 'over-800', label: 'Over ₹800' },
-];
 
 const CATEGORY_TABS = [
   { value: '', label: 'All Products', icon: LayoutGrid },
@@ -37,9 +32,17 @@ export default function Shop() {
   const [flavoursOpen, setFlavoursOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
 
+  const { formatPrice } = useCurrency();
   const priceRef = useRef(null);
   const flavoursRef = useRef(null);
   const sortRef = useRef(null);
+
+  const dynamicPriceOptions = useMemo(() => [
+    { value: '', label: 'All Prices' },
+    { value: 'under-400', label: `Under ${formatPrice(400)}` },
+    { value: '400-800', label: `${formatPrice(400)} – ${formatPrice(800)}` },
+    { value: 'over-800', label: `Over ${formatPrice(800)}` },
+  ], [formatPrice]);
 
   const activeFlavour = searchParams.get('flavour') || '';
   const activePriceRange = searchParams.get('price') || '';
@@ -76,19 +79,23 @@ export default function Shop() {
 
   const clearFilters = () => setSearchParams({});
 
+  // Read deleted-slugs-filtered product list on every render so admin deletes
+  // are reflected here without a full page reload.
+  const visibleProducts = useMemo(() => getVisibleProducts(), []);
+
   // Dynamic counts for flavours based on the actual catalog
   const flavourCounts = useMemo(() => {
     const counts = {};
-    products.forEach(p => {
+    visibleProducts.forEach(p => {
       if (p.flavour) {
         counts[p.flavour] = (counts[p.flavour] || 0) + 1;
       }
     });
     return counts;
-  }, []);
+  }, [visibleProducts]);
 
   const filtered = useMemo(() => {
-    let result = [...products];
+    let result = [...visibleProducts];
 
     // Category tab filter
     if (activeCategory === 'coffee') {
@@ -130,7 +137,7 @@ export default function Shop() {
     }
 
     return result;
-  }, [activeFlavour, activeSort, searchQuery, activePriceRange, inStockOnly, activeCategory]);
+  }, [visibleProducts, activeFlavour, activeSort, searchQuery, activePriceRange, inStockOnly, activeCategory]);
 
   const isAccessoriesView = activeCategory === CATEGORIES.ACCESSORIES;
 
@@ -165,10 +172,10 @@ export default function Shop() {
                 {tab.label}
                 <span className="shop-category-tab__count">
                   {tab.value === ''
-                    ? products.length
+                    ? visibleProducts.length
                     : tab.value === 'coffee'
-                    ? products.filter(p => COFFEE_CATEGORIES.includes(p.category)).length
-                    : products.filter(p => p.category === tab.value).length}
+                    ? visibleProducts.filter(p => COFFEE_CATEGORIES.includes(p.category)).length
+                    : visibleProducts.filter(p => p.category === tab.value).length}
                 </span>
               </button>
             );
@@ -205,7 +212,7 @@ export default function Shop() {
               </button>
               {priceOpen && (
                 <div className="shop-dropdown__menu">
-                  {PRICE_OPTIONS.map(opt => (
+                  {dynamicPriceOptions.map(opt => (
                     <button
                       key={opt.value}
                       className={`shop-dropdown__item ${activePriceRange === opt.value ? 'active' : ''}`}

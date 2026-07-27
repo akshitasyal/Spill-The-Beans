@@ -1,107 +1,125 @@
-// AnalyticsService.js — Generates 12 months of realistic revenue/orders/customer analytics
+// AnalyticsService.js — Multi-source Live Analytics Engine
 
 const API_BASE_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/admin`;
 
-// ─── Seed Generator ──────────────────────────────────────────────────────────
-function generateAnalyticsData() {
-  const now = new Date();
-  const months = [];
-  const PRODUCT_NAMES = [
-    'Mocha pe Chauka', 'Hazelnut Bliss', 'Vanilla Dream', 'Raat Ki Rani Espresso',
-    'Caramel Surge', 'Araku Valley Single Origin', 'Strawberry Bliss', 'Pistachio Luxe',
-    'Milk Frother Pro', 'STB Assorted Box', 'Bestsellers Bundle', 'Kacha Aam Cooler'
-  ];
-  const CATEGORIES = ['Soluble Coffee', 'Espresso Beans', 'Cold Brew', 'Accessories', 'Gift Sets', 'Combos'];
+function normalizeAmount(tot) {
+  const val = Number(tot || 0);
+  return val > 10000 ? Math.round(val / 100) : Math.round(val);
+}
 
-  // Monthly data — last 12 months
+function buildAnalyticsData(orders = [], customers = []) {
+  const now = new Date();
+  
+  // Only valid, non-cancelled orders
+  const validOrders = orders.filter(o => o && o.status !== 'CANCELLED');
+
+  // 12 Months Real Data
+  const months = [];
   for (let m = 11; m >= 0; m--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - m, 1);
-    const base = 350000 + Math.round(Math.sin((11 - m) * 0.6) * 120000 + Math.random() * 60000);
+    const start = new Date(now.getFullYear(), now.getMonth() - m, 1);
+    const end = new Date(now.getFullYear(), now.getMonth() - m + 1, 0, 23, 59, 59, 999);
+    const label = start.toLocaleString('default', { month: 'short', year: '2-digit' });
+    const labelFull = start.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+    const monthOrders = validOrders.filter(o => {
+      if (!o.createdAt) return false;
+      const d = new Date(o.createdAt);
+      return d >= start && d <= end;
+    });
+
+    const revenue = monthOrders.reduce((s, o) => s + normalizeAmount(o.total), 0);
+    const orderCount = monthOrders.length;
+    const avgOrderValue = orderCount > 0 ? Math.round(revenue / orderCount) : 0;
+
+    const monthCustomers = new Set();
+    monthOrders.forEach(o => {
+      const email = o.user?.email || o.customerEmail || o.email || o.userId;
+      if (email) monthCustomers.add(email);
+    });
+
     months.push({
-      month: d.toLocaleString('default', { month: 'short', year: '2-digit' }),
-      monthFull: d.toLocaleString('default', { month: 'long', year: 'numeric' }),
-      revenue: base,
-      orders: Math.round(base / 65000 * (0.8 + Math.random() * 0.4) * 10),
-      customers: Math.round(base / 65000 * (0.7 + Math.random() * 0.5) * 8),
-      newCustomers: Math.round(base / 65000 * (0.4 + Math.random() * 0.3) * 6),
-      returns: Math.round(base / 65000 * (Math.random() * 0.8)),
-      avgOrderValue: Math.round(base / Math.max(Math.round(base / 65000 * 10), 1))
+      month: label,
+      monthFull: labelFull,
+      revenue,
+      orders: orderCount,
+      customers: monthCustomers.size,
+      newCustomers: monthCustomers.size,
+      returns: 0,
+      avgOrderValue,
     });
   }
 
-  // Daily data — last 30 days
+  // 30 Days Real Daily Data
   const daily = [];
   for (let d = 29; d >= 0; d--) {
-    const date = new Date(now - d * 86400000);
-    const dayRevenue = 8000 + Math.round(Math.random() * 22000);
-    daily.push({
-      date: date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
-      revenue: dayRevenue,
-      orders: Math.max(1, Math.round(dayRevenue / 6800 * (0.8 + Math.random() * 0.4)))
+    const dayStart = new Date(now); dayStart.setDate(now.getDate() - d); dayStart.setHours(0,0,0,0);
+    const dayEnd = new Date(now); dayEnd.setDate(now.getDate() - d); dayEnd.setHours(23,59,59,999);
+    const dateLabel = dayStart.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+
+    const dayOrders = validOrders.filter(o => {
+      if (!o.createdAt) return false;
+      const d = new Date(o.createdAt);
+      return d >= dayStart && d <= dayEnd;
     });
+
+    const dayRevenue = dayOrders.reduce((s, o) => s + normalizeAmount(o.total), 0);
+    daily.push({ date: dateLabel, revenue: dayRevenue, orders: dayOrders.length });
   }
 
-  // Top products
-  const topProducts = PRODUCT_NAMES.slice(0, 8).map((name, i) => ({
-    name,
-    revenue: Math.round((180000 - i * 18000) + Math.random() * 25000),
-    units: Math.round((280 - i * 25) + Math.random() * 40),
-    category: CATEGORIES[i % CATEGORIES.length]
-  })).sort((a, b) => b.revenue - a.revenue);
-
-  // Category breakdown
-  const categoryBreakdown = CATEGORIES.map((cat, i) => ({
-    name: cat,
-    value: Math.round((280000 - i * 30000) + Math.random() * 50000),
-    percent: 0
-  }));
-  const catTotal = categoryBreakdown.reduce((s, c) => s + c.value, 0);
-  categoryBreakdown.forEach(c => { c.percent = Math.round(c.value / catTotal * 100); });
-
-  // Returning vs new customers (last 12 months)
-  const returningData = months.map(m => ({
-    month: m.month,
-    returning: m.customers - m.newCustomers,
-    new: m.newCustomers
-  }));
-
-  return { months, daily, topProducts, categoryBreakdown, returningData };
+  return {
+    months,
+    daily,
+    topProducts: [],
+    categoryBreakdown: []
+  };
 }
 
-function getLocalAnalytics() {
-  const local = localStorage.getItem('stb_admin_analytics');
-  if (!local) {
-    const data = generateAnalyticsData();
-    localStorage.setItem('stb_admin_analytics', JSON.stringify(data));
-    return data;
-  }
-  return JSON.parse(local);
-}
-
-// ─── Service ─────────────────────────────────────────────────────────────────
 export const AnalyticsService = {
   async getAnalytics() {
+    let apiOrders = [];
+    let apiCustomers = [];
     try {
-      const res = await fetch(`${API_BASE_URL}/analytics`);
-      if (!res.ok) throw new Error('API unavailable');
-      return await res.json();
-    } catch {
-      const data = getLocalAnalytics();
-      return { success: true, data };
-    }
+      const [oRes, cRes] = await Promise.allSettled([
+        fetch(`${API_BASE_URL}/orders`).then(r => r.json()),
+        fetch(`${API_BASE_URL}/customers`).then(r => r.json())
+      ]);
+      if (oRes.status === 'fulfilled' && oRes.value?.success) {
+        apiOrders = oRes.value.data || oRes.value.items || [];
+      }
+      if (cRes.status === 'fulfilled' && cRes.value?.success) {
+        apiCustomers = cRes.value.data || [];
+      }
+    } catch (e) {}
+
+    let placedOrders = [];
+    let adminOrders = [];
+    try {
+      placedOrders = Object.values(JSON.parse(localStorage.getItem('stb_placed_orders') || '{}'));
+    } catch (e) {}
+    try {
+      adminOrders = JSON.parse(localStorage.getItem('stb_admin_detailed_orders') || '[]');
+    } catch (e) {}
+
+    const orderMap = {};
+    apiOrders.forEach(o => { if (o && o.id) orderMap[o.id] = o; });
+    placedOrders.forEach(o => { if (o && o.id) orderMap[o.id] = { ...orderMap[o.id], ...o }; });
+    adminOrders.forEach(o => { if (o && o.id) orderMap[o.id] = { ...orderMap[o.id], ...o }; });
+
+    const allOrders = Object.values(orderMap);
+    const analyticsData = buildAnalyticsData(allOrders, apiCustomers);
+
+    return { success: true, data: analyticsData };
   },
 
   async refreshAnalytics() {
-    const data = generateAnalyticsData();
-    localStorage.setItem('stb_admin_analytics', JSON.stringify(data));
-    return { success: true, data };
+    return this.getAnalytics();
   },
 
-  async exportCSV(months) {
+  async exportCSV(months = []) {
     const rows = [
       'Month,Revenue (₹),Orders,Customers,New Customers,Avg Order Value (₹)',
       ...months.map(m =>
-        `${m.monthFull},${(m.revenue / 100).toFixed(2)},${m.orders},${m.customers},${m.newCustomers},${(m.avgOrderValue / 100).toFixed(2)}`
+        `${m.monthFull},${m.revenue.toFixed(2)},${m.orders},${m.customers},${m.newCustomers},${m.avgOrderValue.toFixed(2)}`
       )
     ].join('\n');
     return rows;

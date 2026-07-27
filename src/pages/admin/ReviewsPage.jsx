@@ -4,8 +4,6 @@ import { SectionHeader } from './AdminLayout';
 import { Star, Check, X, Trash2, RefreshCw, Search, ChevronRight, MessageSquare } from 'lucide-react';
 import ConfirmationModal from '../../components/admin/ConfirmationModal';
 
-const STATUS_OPTIONS = ['', 'PENDING', 'APPROVED', 'REJECTED'];
-const RATINGS = ['', '5', '4', '3', '2', '1'];
 
 // Extend ReviewService mock with richer data
 function getEnrichedReviews() {
@@ -92,8 +90,8 @@ export default function ReviewsPage() {
     const allReviews = getEnrichedReviews() || reviews;
     const idx = allReviews.findIndex(r => r.id === id);
     if (idx > -1) {
-      allReviews[idx] = { ...allReviews[idx], status, isApproved: status === 'APPROVED' };
-      saveEnrichedReviews(allReviews);
+      const updated = allReviews.map((r, i) => i === idx ? { ...r, status, isApproved: status === 'APPROVED' } : r);
+      saveEnrichedReviews(updated);
     }
     setReviews(prev => prev.map(r => r.id === id ? { ...r, status, isApproved: status === 'APPROVED' } : r));
     if (drawerReview?.id === id) setDrawerReview(prev => ({ ...prev, status, isApproved: status === 'APPROVED' }));
@@ -147,8 +145,8 @@ export default function ReviewsPage() {
     const allReviews = getEnrichedReviews() || reviews;
     const idx = allReviews.findIndex(r => r.id === drawerReview.id);
     if (idx > -1) {
-      allReviews[idx] = { ...allReviews[idx], adminNote: drawerNote };
-      saveEnrichedReviews(allReviews);
+      const updated = allReviews.map((r, i) => i === idx ? { ...r, adminNote: drawerNote } : r);
+      saveEnrichedReviews(updated);
     }
     setReviews(prev => prev.map(r => r.id === drawerReview.id ? { ...r, adminNote: drawerNote } : r));
     setDrawerReview(prev => ({ ...prev, adminNote: drawerNote }));

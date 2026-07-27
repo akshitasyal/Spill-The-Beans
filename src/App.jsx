@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
-import { HelmetProvider, Helmet } from 'react-helmet-async';
+import { HelmetProvider } from 'react-helmet-async';
 import { AnimatePresence } from 'framer-motion';
 import { CartProvider } from './context/CartContext';
 import { WishlistProvider } from './context/WishlistContext';

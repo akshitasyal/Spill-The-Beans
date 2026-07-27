@@ -2,99 +2,70 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { useAuth } from '../context/AuthContext';
-import { Package, MapPin, ChevronRight, Plus, Trash2 } from 'lucide-react';
+import { Package, MapPin, ChevronRight, Plus, Trash2, Star } from 'lucide-react';
 import PageWrapper from '../components/PageWrapper';
+import { ReviewService } from '../services/ReviewService';
+import { NotificationService } from '../services/NotificationService';
+import { useCurrency } from '../context/CurrencyContext';
 import './Profile.css';
 
 function formatOrderForTracking(order) {
   if (!order) return null;
   
-  // If it's already a formatted tracking object from stb_placed_orders
-  if (order.steps && Array.isArray(order.steps)) {
-    // If status has been updated in admin but steps weren't, synchronize steps
-    if (order.status !== 'CONFIRMED' && order.status !== 'PROCESSING') {
-      return {
-        ...order,
-        courier: order.status === 'CONFIRMED' || order.status === 'PROCESSING' ? 'Pending Dispatch' : (order.courier || 'Delhivery'),
-        trackingNumber: order.status === 'CONFIRMED' || order.status === 'PROCESSING' ? 'Pending' : (order.trackingNumber || 'DEL' + Math.floor(Math.random() * 90000000)),
-        steps: order.steps.map((step, idx) => {
-          if (idx === 0) return { ...step, done: true };
-          if (idx === 1 && ['PROCESSING', 'SHIPPED', 'DELIVERED'].includes(order.status)) return { ...step, done: true };
-          if (idx === 2 && ['SHIPPED', 'DELIVERED'].includes(order.status)) return { ...step, done: true };
-          if (idx === 3 && ['DELIVERED'].includes(order.status)) return { ...step, done: true };
-          if (idx === 4 && order.status === 'DELIVERED') return { ...step, done: true };
-          return step;
-        })
-      };
-    }
-    return {
-      ...order,
-      courier: order.status === 'CONFIRMED' || order.status === 'PROCESSING' ? 'Pending Dispatch' : order.courier,
-      trackingNumber: order.status === 'CONFIRMED' || order.status === 'PROCESSING' ? 'Pending' : order.trackingNumber
-    };
-  }
+  const status = order.status || 'CONFIRMED';
+  const isEarlyStage = ['CONFIRMED', 'PENDING', 'PLACED'].includes(status) && !order.courierPartner && !order.courier;
 
-  // If it's a standard order object from stb_admin_detailed_orders
-  const timeline = order.timeline || {};
-  
+  const courier = order.courierPartner || order.courier || (isEarlyStage ? 'Pending Dispatch' : 'Delhivery Express');
+  const trackingNumber = order.trackingId || order.trackingNumber || (isEarlyStage ? 'Pending' : 'DEL90184021');
+
   // Format estimated delivery
-  let estDeliveryStr = 'Pending';
-  if (order.estimatedDelivery) {
-    estDeliveryStr = new Date(order.estimatedDelivery).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-  } else {
-    estDeliveryStr = new Date(new Date(order.createdAt).getTime() + 3600000 * 24 * 3).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-  }
+  const estDeliveryStr = order.estimatedDelivery
+    ? new Date(order.estimatedDelivery).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+    : new Date(new Date(order.createdAt || Date.now()).getTime() + 3600000 * 24 * 3).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
   // Format address
-  let addressStr = '';
-  if (typeof order.address === 'object') {
-    const a = order.address;
-    addressStr = `${a.line1 || a.street || ''}${a.line2 ? ', ' + a.line2 : ''}, ${a.city || ''}, ${a.state || ''} - ${a.pincode || a.zip || ''}`;
-  } else {
-    addressStr = order.address || '';
-  }
+  const addressStr = typeof order.address === 'object'
+    ? (() => { const a = order.address || {}; return `${a.line1 || a.street || ''}${a.line2 ? ', ' + a.line2 : ''}, ${a.city || ''}, ${a.state || ''} - ${a.pincode || a.zip || ''}`; })()
+    : (order.address || '');
 
-  const steps = [
-    { 
-      label: 'Order Placed', 
-      time: order.createdAt ? new Date(order.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Pending', 
-      done: true 
-    },
-    { 
-      label: 'Processing & Roasting', 
-      time: timeline.processing ? new Date(timeline.processing).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Pending', 
-      done: ['PROCESSING', 'PACKED', 'SHIPPED', 'DELIVERED'].includes(order.status) || !!timeline.processing 
-    },
-    { 
-      label: 'Dispatched from Warehouse', 
-      time: timeline.shipped ? new Date(timeline.shipped).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Pending', 
-      done: ['SHIPPED', 'DELIVERED'].includes(order.status) || !!timeline.shipped 
-    },
-    { 
-      label: 'Out for Delivery', 
-      time: timeline.shipped ? new Date(new Date(timeline.shipped).getTime() + 3600000 * 12).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Pending', 
-      done: order.status === 'DELIVERED' 
-    },
-    { 
-      label: 'Delivered', 
-      time: timeline.delivered ? new Date(timeline.delivered).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Pending', 
-      done: order.status === 'DELIVERED' || !!timeline.delivered 
-    },
-  ];
+  const normalizedItems = (order.items || []).map(item => ({
+    ...item,
+    price: item.price > 1000 ? item.price / 100 : item.price
+  }));
+  const normalizedTotal = order.total > 1000 ? order.total / 100 : order.total;
 
   return {
     id: order.id,
-    status: order.status,
-    courier: order.status === 'CONFIRMED' || order.status === 'PROCESSING' ? 'Pending Dispatch' : (order.courierPartner || 'Delhivery'),
-    trackingNumber: order.status === 'CONFIRMED' || order.status === 'PROCESSING' ? 'Pending' : (order.trackingId || 'Pending'),
+    status: status,
+    courier: courier,
+    trackingNumber: trackingNumber,
     estimatedDelivery: estDeliveryStr,
     address: addressStr,
-    steps
+    items: normalizedItems,
+    total: normalizedTotal,
+    createdAt: order.createdAt,
+    steps: order.steps || []
   };
+}
+
+function formatOrderDisplayId(order) {
+  if (!order) return 'DEL16810175';
+  if (typeof order === 'string') {
+    if (order.startsWith('DEL') || order.startsWith('SB') || order.startsWith('IMP')) return order;
+    return `DEL${order.substring(order.length - 8).toUpperCase()}`;
+  }
+  const trackId = order.trackingNumber || order.trackingId;
+  if (trackId && trackId !== 'Pending') {
+    return trackId;
+  }
+  const id = order.id || '';
+  if (id.startsWith('DEL') || id.startsWith('SB') || id.startsWith('IMP')) return id;
+  return `DEL${id.substring(id.length - 8).toUpperCase()}`;
 }
 
 export default function Profile() {
   const { user, logout, isLoggedIn } = useAuth();
+  const { formatPrice } = useCurrency();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('orders'); // 'orders' or 'addresses'
   
@@ -114,6 +85,70 @@ export default function Profile() {
     pincode: '',
     isDefault: false
   });
+
+  // Inline review states
+  const [activeReviewKey, setActiveReviewKey] = useState(null); // 'orderId-itemId'
+  const [inlineRating, setInlineRating] = useState(5);
+  const [inlineTitle, setInlineTitle] = useState('');
+  const [inlineBody, setInlineBody] = useState('');
+  const [inlineReviewError, setInlineReviewError] = useState('');
+  const [submitSuccessKey, setSubmitSuccessKey] = useState(null); // 'orderId-itemId'
+
+  const handleToggleReviewForm = (orderId, itemId) => {
+    const key = `${orderId}-${itemId}`;
+    if (activeReviewKey === key) {
+      setActiveReviewKey(null);
+    } else {
+      setActiveReviewKey(key);
+      setInlineRating(5);
+      setInlineTitle('');
+      setInlineBody('');
+      setInlineReviewError('');
+    }
+  };
+
+  const handleInlineReviewSubmit = async (e, orderId, productName) => {
+    e.preventDefault();
+    const key = activeReviewKey;
+    if (!inlineTitle.trim() || !inlineBody.trim()) {
+      setInlineReviewError('Please fill out all fields.');
+      return;
+    }
+    setInlineReviewError('');
+    try {
+      const res = await ReviewService.createReview({
+        rating: inlineRating,
+        title: inlineTitle,
+        body: inlineBody,
+        userName: user?.name || 'Verified Buyer',
+        userEmail: user?.email || 'verified@example.com',
+        productName: productName,
+        isApproved: true // Auto-approved since it's verified purchase!
+      });
+      if (res.success) {
+        setSubmitSuccessKey(key);
+        
+        // Trigger New Review Notification
+        try {
+          NotificationService.createNotification(
+            'NEW_REVIEW',
+            `Verified Purchase: New ${inlineRating}-star review on ${productName} from ${user?.name || 'Verified Buyer'}`
+          );
+        } catch (notifErr) {
+          console.error(notifErr);
+        }
+
+        setTimeout(() => {
+          setActiveReviewKey(null);
+          setSubmitSuccessKey(null);
+          setInlineTitle('');
+          setInlineBody('');
+        }, 2000);
+      }
+    } catch (err) {
+      setInlineReviewError(err.message || 'Failed to submit review.');
+    }
+  };
 
   // Redirect if not logged in
   useEffect(() => {
@@ -140,21 +175,12 @@ export default function Profile() {
       // Merge them, prefer adminOrders for tracking status updates
       const mergedMap = {};
       
-      if (userOrders.length === 0 && userAdminOrders.length === 0) {
-        Object.values(allOrders).forEach(o => {
-          mergedMap[o.id] = formatOrderForTracking(o);
-        });
-        adminOrders.forEach(o => {
-          mergedMap[o.id] = formatOrderForTracking(o);
-        });
-      } else {
-        userOrders.forEach(o => {
-          mergedMap[o.id] = formatOrderForTracking(o);
-        });
-        userAdminOrders.forEach(o => {
-          mergedMap[o.id] = formatOrderForTracking(o);
-        });
-      }
+      userOrders.forEach(o => {
+        mergedMap[o.id] = formatOrderForTracking(o);
+      });
+      userAdminOrders.forEach(o => {
+        mergedMap[o.id] = formatOrderForTracking(o);
+      });
 
       const displayOrders = Object.values(mergedMap);
       setOrders(displayOrders.sort((a, b) => b.id.localeCompare(a.id)));
@@ -265,20 +291,174 @@ export default function Profile() {
                   <div key={order.id} className="profile-order-card">
                     <div className="profile-order-card__header">
                       <div>
-                        <div className="profile-order-card__id">{order.id}</div>
+                        <div className="profile-order-card__id">{formatOrderDisplayId(order)}</div>
                         <div className="profile-order-card__date">Estimated Delivery: {order.estimatedDelivery}</div>
                       </div>
                       <span className={`profile-order-status-badge profile-order-status-badge--${order.status.toLowerCase()}`}>
                         {order.status}
                       </span>
                     </div>
-                    <div className="profile-order-card__footer">
-                      <div className="profile-order-card__details">
-                        Courier: <strong>{order.courier}</strong> · Tracking: <strong>{order.trackingNumber}</strong>
+                    {/* Order Items Details */}
+                    {order.items && order.items.length > 0 && (
+                      <div className="profile-order-card__items" style={{ padding: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        {order.items.map((item, idx) => {
+                          const itemKey = item.id || item.productId || item.sku || `item-${idx}`;
+                          const reviewKey = `${order.id}-${itemKey}`;
+
+                          return (
+                            <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.5rem 0', borderBottom: idx < order.items.length - 1 ? '1px dashed rgba(255,255,255,0.03)' : 'none' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                  {item.image && (
+                                    <img 
+                                      src={item.image} 
+                                      alt={item.name} 
+                                      style={{ width: '40px', height: '40px', borderRadius: '4px', objectFit: 'cover', background: 'rgba(255,255,255,0.03)' }} 
+                                    />
+                                  )}
+                                  <div>
+                                    <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-cream)', margin: 0 }}>{item.name}</p>
+                                    <p className="text-xs text-muted" style={{ margin: 0 }}>
+                                      {item.weight || 'Standard'} · {item.quantity} x {formatPrice(item.price)}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                  <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-cream)' }}>
+                                    {formatPrice(item.quantity * item.price)}
+                                  </span>
+                                  {order.status === 'DELIVERED' && (
+                                    <button 
+                                      onClick={() => handleToggleReviewForm(order.id, itemKey)}
+                                      className="btn btn-outline"
+                                      style={{ 
+                                        padding: '0.35rem 0.75rem', 
+                                        fontSize: '0.78rem', 
+                                        borderRadius: '6px', 
+                                        borderColor: 'var(--accent-amber)',
+                                        color: 'var(--accent-amber)',
+                                        fontWeight: 600,
+                                        cursor: 'pointer',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '0.3rem'
+                                      }}
+                                    >
+                                      <Star size={13} fill={activeReviewKey === reviewKey ? 'var(--accent-amber)' : 'none'} />
+                                      {activeReviewKey === reviewKey ? 'Cancel' : 'Write Review'}
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Inline Review Form */}
+                              {activeReviewKey === reviewKey && (
+                                <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '6px', marginTop: '0.5rem' }}>
+                                  {submitSuccessKey === reviewKey ? (
+                                    <p style={{ color: '#95d5b2', fontSize: '0.875rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                      ✓ Review submitted and published to product page!
+                                    </p>
+                                  ) : (
+                                    <form onSubmit={(e) => handleInlineReviewSubmit(e, order.id, item.name)} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                      {inlineReviewError && <p style={{ color: '#f08080', fontSize: '0.75rem', margin: 0 }}>{inlineReviewError}</p>}
+                                      
+                                      <div>
+                                        <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Rating</label>
+                                        <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                          {[1, 2, 3, 4, 5].map((star) => (
+                                            <button
+                                              key={star}
+                                              type="button"
+                                              onClick={() => setInlineRating(star)}
+                                              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                                            >
+                                              <Star 
+                                                size={16} 
+                                                fill={inlineRating >= star ? 'var(--accent-amber)' : 'none'} 
+                                                color={inlineRating >= star ? 'var(--accent-amber)' : 'var(--text-muted)'} 
+                                              />
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </div>
+
+                                      <div>
+                                        <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Title</label>
+                                        <input 
+                                          type="text" 
+                                          required 
+                                          value={inlineTitle} 
+                                          onChange={e => setInlineTitle(e.target.value)} 
+                                          placeholder="Summarize your experience..."
+                                          style={{ width: '100%', background: 'rgba(253,224,193,0.03)', border: '1px solid var(--border-subtle)', color: 'var(--text-cream)', padding: '0.4rem 0.6rem', borderRadius: '4px', fontSize: '0.8125rem' }}
+                                        />
+                                      </div>
+
+                                      <div>
+                                        <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Comment</label>
+                                        <textarea 
+                                          required 
+                                          rows={3}
+                                          value={inlineBody} 
+                                          onChange={e => setInlineBody(e.target.value)} 
+                                          placeholder="Would you recommend this roast? How does it taste?"
+                                          style={{ width: '100%', background: 'rgba(253,224,193,0.03)', border: '1px solid var(--border-subtle)', color: 'var(--text-cream)', padding: '0.4rem 0.6rem', borderRadius: '4px', fontSize: '0.8125rem', resize: 'vertical' }}
+                                        />
+                                      </div>
+
+                                      <button 
+                                        type="submit" 
+                                        className="btn btn-primary"
+                                        style={{ padding: '0.4rem 1.25rem', fontSize: '0.8125rem', alignSelf: 'flex-start' }}
+                                      >
+                                        Submit Review
+                                      </button>
+                                    </form>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
-                      <Link to={`/track?id=${order.id}`} className="profile-order-track-link">
-                        Track Order <ChevronRight size={14} />
-                      </Link>
+                    )}
+                    <div className="profile-order-card__footer" style={{ padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                      <div className="profile-order-card__details" style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+                          Courier: <strong style={{ color: order.status === 'DELIVERED' ? '#95d5b2' : 'var(--text-cream)' }}>{order.courier}</strong> · Tracking: <strong style={{ color: 'var(--text-cream)' }}>{order.trackingNumber}</strong>
+                        </div>
+                        {order.total > 0 && (
+                          <div style={{ fontSize: '0.875rem', color: 'var(--text-cream)' }}>
+                            Total Paid: <strong>{formatPrice(order.total)}</strong>
+                          </div>
+                        )}
+                      </div>
+
+                      {order.status === 'DELIVERED' ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <span style={{ 
+                            padding: '0.4rem 0.85rem', 
+                            borderRadius: '8px', 
+                            background: 'rgba(34, 197, 94, 0.15)', 
+                            border: '1px solid rgba(34, 197, 94, 0.3)', 
+                            color: '#4ade80', 
+                            fontWeight: 700, 
+                            fontSize: '0.85rem',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem'
+                          }}>
+                            ✓ Delivered
+                          </span>
+                          <Link to={`/track?id=${order.id}`} style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', textDecoration: 'none' }}>
+                            Track History ›
+                          </Link>
+                        </div>
+                      ) : (
+                        <Link to={`/track?id=${order.id}`} className="profile-order-track-link">
+                          Track Order <ChevronRight size={14} />
+                        </Link>
+                      )}
                     </div>
                   </div>
                 ))}

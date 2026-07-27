@@ -2,8 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { ArrowRight, ChevronDown, Star, Sprout, ChevronLeft, ChevronRight, Volume2, VolumeX } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { heroBg, products } from '../data/products';
+import { getVisibleProducts } from '../data/products';
 import ProductCard from '../components/ProductCard';
 import NewsletterSection from '../components/NewsletterSection';
 import { useScrollAnimation } from '../hooks/useScrollAnimation';
@@ -24,7 +23,7 @@ const HERO_SLIDES = [
 ];
 
 // Custom silhouette map of India icon
-const IndiaIcon = ({ size = 20, color = "#581312" }) => (
+const IndiaIcon = ({ size = 20 }) => (
   <svg
     width={size}
     height={size}
@@ -37,7 +36,7 @@ const IndiaIcon = ({ size = 20, color = "#581312" }) => (
 );
 
 // Custom coffee beans icon
-const CoffeeBeansIcon = ({ size = 20, color = "#581312" }) => (
+const CoffeeBeansIcon = ({ size = 20 }) => (
   <svg
     width={size}
     height={size}
@@ -72,7 +71,6 @@ export default function Home() {
   const exploreRef = useScrollAnimation();
   const sliderRef = useRef(null);
   const [scrollProgress, setScrollProgress] = useState(0);
-  const [heroLoaded, setHeroLoaded] = useState(false);
   const videoRef = useRef(null);
   const [isMuted, setIsMuted] = useState(true);
 
@@ -83,9 +81,10 @@ export default function Home() {
     }
   };
 
-  // Retrieve products in exact ID order
-  const exploreProducts = EXPLORE_PRODUCT_IDS.map(id => 
-    products.find(p => p.id === id)
+  // Retrieve visible (non-deleted) products in exact ID order
+  const visibleProducts = getVisibleProducts();
+  const exploreProducts = EXPLORE_PRODUCT_IDS.map(id =>
+    visibleProducts.find(p => p.id === id)
   ).filter(Boolean);
 
   const handleScroll = () => {
@@ -310,7 +309,7 @@ export default function Home() {
 
           <div className="combos-section__grid">
             {BESTSELLING_COMBO_IDS.map(id => {
-              const product = products.find(p => p.id === id);
+              const product = visibleProducts.find(p => p.id === id);
               if (!product) return null;
               const savePct = product.originalPrice
                 ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
@@ -370,7 +369,7 @@ export default function Home() {
 
           <div className="products-grid">
             {[109, 108, 46, 47].map(id => {
-              const product = products.find(p => p.id === id);
+              const product = visibleProducts.find(p => p.id === id);
               if (!product) return null;
               return (
                 <div key={product.id}>

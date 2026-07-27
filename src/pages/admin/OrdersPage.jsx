@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { OrderService } from '../../services/OrderService';
 import { SectionHeader } from './AdminLayout';
-import OrdersTable from '../../components/admin/OrdersTable';
 import FilterBar from '../../components/admin/FilterBar';
-import BulkActions from '../../components/admin/BulkActions';
+import StatusBadge from '../../components/admin/StatusBadge';
 import ConfirmationModal from '../../components/admin/ConfirmationModal';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Package, ArrowRight, Clock, CheckCircle2, Truck, Flame, LayoutGrid, List } from 'lucide-react';
 
-const ITEMS_PER_PAGE = 25;
+const ITEMS_PER_PAGE = 20;
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
@@ -17,6 +17,7 @@ export default function OrdersPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState(null);
   const [toastMsg, setToastMsg] = useState('');
+  const [viewMode, setViewMode] = useState('cards'); // 'cards' or 'table'
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -34,6 +35,7 @@ export default function OrdersPage() {
   };
 
   const fetchOrders = useCallback(() => {
+    setLoading(true);
     OrderService.getOrders({
       status, paymentStatus, paymentMethod,
       search: searchQuery, amountMin, amountMax,
@@ -45,45 +47,15 @@ export default function OrdersPage() {
         setSelectedIds([]);
       }
       setLoading(false);
+    }).catch(err => {
+      console.error('Failed to fetch orders:', err);
+      setLoading(false);
     });
   }, [status, paymentStatus, paymentMethod, searchQuery, amountMin, amountMax, dateStart, dateEnd]);
 
   useEffect(() => {
-    let active = true;
-    const timer = setTimeout(() => {
-      if (active) setLoading(true);
-    }, 0);
-    OrderService.getOrders({
-      status, paymentStatus, paymentMethod,
-      search: searchQuery, amountMin, amountMax,
-      dateStart, dateEnd
-    }).then(res => {
-      clearTimeout(timer);
-      if (active) {
-        if (res.success) {
-          setOrders(res.data);
-          setCurrentPage(1);
-          setSelectedIds([]);
-        }
-        setLoading(false);
-      }
-    });
-    return () => { active = false; clearTimeout(timer); };
-  }, [status, paymentStatus, paymentMethod, searchQuery, amountMin, amountMax, dateStart, dateEnd]);
-
-  const handleSelectRow = (id, checked) => {
-    setSelectedIds(prev => checked ? [...prev, id] : prev.filter(x => x !== id));
-  };
-
-  const handleSelectAll = (checked) => {
-    const pageOrders = paginatedOrders;
-    setSelectedIds(checked ? pageOrders.map(o => o.id) : []);
-  };
-
-  const handleDeleteOrder = (id) => {
-    setPendingDeleteId(id);
-    setShowDeleteModal(true);
-  };
+    fetchOrders();
+  }, [fetchOrders]);
 
   const confirmDelete = async () => {
     if (pendingDeleteId) {
@@ -95,64 +67,79 @@ export default function OrdersPage() {
     }
   };
 
-  const handleBulkAction = async (action) => {
-    if (selectedIds.length === 0) return;
-
-    if (action === 'delete') {
-      if (confirm(`Permanently delete ${selectedIds.length} orders? This cannot be undone.`)) {
-        await OrderService.bulkDeleteOrders(selectedIds);
-        fetchOrders();
-        showToast(`Deleted ${selectedIds.length} orders.`);
-      }
-      return;
-    }
-
-    if (action === 'export') {
-      const exportData = orders.filter(o => selectedIds.includes(o.id));
-      const csv = [
-        'Order ID,Customer,Email,Total,Status,Payment,Date',
-        ...exportData.map(o => `${o.id},${o.customerName},${o.customerEmail},${(o.total/100).toFixed(2)},${o.status},${o.paymentStatus},${new Date(o.createdAt).toLocaleDateString()}`)
-      ].join('\n');
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `orders_export_${Date.now()}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast(`Exported ${selectedIds.length} orders as CSV.`);
-      return;
-    }
-
-    const statusMap = {
-      processing: 'PROCESSING',
-      shipped: 'SHIPPED',
-      delivered: 'DELIVERED',
-      cancel: 'CANCELLED'
-    };
-
-    if (statusMap[action]) {
-      await OrderService.bulkUpdateOrders(selectedIds, { status: statusMap[action] });
-      fetchOrders();
-      showToast(`Updated ${selectedIds.length} orders to ${statusMap[action]}.`);
-    }
-  };
+  // Operational metrics summary
+  const totalCount = orders.length;
+  const pendingPack = orders.filter(o => ['PLACED', 'PENDING', 'CONFIRMED'].includes(o.status)).length;
+  const inRoastPack = orders.filter(o => ['PACKED', 'ROASTED', 'PROCESSING'].includes(o.status)).length;
+  const inTransit = orders.filter(o => ['DISPATCHED', 'SHIPPED', 'OUT_FOR_DELIVERY'].includes(o.status)).length;
+  const delivered = orders.filter(o => o.status === 'DELIVERED').length;
 
   // Pagination
   const totalPages = Math.ceil(orders.length / ITEMS_PER_PAGE);
   const paginatedOrders = orders.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   return (
-    <div>
+    <div style={containerStyle}>
       <SectionHeader
-        title="Orders Management"
-        subtitle={`${orders.length} orders found. Manage fulfillment, shipments, and payment status.`}
+        title="Order Operations Console"
+        subtitle={`${orders.length} active orders requiring guided fulfillment and dispatch management.`}
       >
-        <button onClick={fetchOrders} style={refreshBtn} title="Refresh orders">
-          <RefreshCw size={14} />
-        </button>
+        <div style={headerActionsRow}>
+          <div style={viewToggleGroup}>
+            <button
+              onClick={() => setViewMode('cards')}
+              style={viewMode === 'cards' ? activeToggleBtn : toggleBtn}
+              title="Shopify/Linear Cards View"
+            >
+              <LayoutGrid size={14} /> Operations Cards
+            </button>
+            <button
+              onClick={() => setViewMode('table')}
+              style={viewMode === 'table' ? activeToggleBtn : toggleBtn}
+              title="Condensed List Table View"
+            >
+              <List size={14} /> Table View
+            </button>
+          </div>
+          <button onClick={fetchOrders} style={refreshBtn} title="Refresh orders">
+            <RefreshCw size={14} /> Refresh
+          </button>
+        </div>
       </SectionHeader>
 
+      {/* Operational Metrics Cards */}
+      <div style={metricsGrid}>
+        <div style={metricCard}>
+          <div style={metricHeader}>
+            <span style={metricLabel}>Total Orders</span>
+            <Package size={16} color="var(--accent-admin-amber)" />
+          </div>
+          <div style={metricValue}>{totalCount}</div>
+        </div>
+        <div style={metricCard}>
+          <div style={metricHeader}>
+            <span style={metricLabel}>Needs Pack / Roast</span>
+            <Flame size={16} color="#f97316" />
+          </div>
+          <div style={metricValue}>{pendingPack + inRoastPack}</div>
+        </div>
+        <div style={metricCard}>
+          <div style={metricHeader}>
+            <span style={metricLabel}>In Transit</span>
+            <Truck size={16} color="#3b82f6" />
+          </div>
+          <div style={metricValue}>{inTransit}</div>
+        </div>
+        <div style={metricCard}>
+          <div style={metricHeader}>
+            <span style={metricLabel}>Delivered</span>
+            <CheckCircle2 size={16} color="#22c55e" />
+          </div>
+          <div style={metricValue}>{delivered}</div>
+        </div>
+      </div>
+
+      {/* Filters */}
       <FilterBar
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
@@ -172,40 +159,99 @@ export default function OrdersPage() {
         onDateEndChange={setDateEnd}
       />
 
-      <BulkActions selectedCount={selectedIds.length} onAction={handleBulkAction} />
+      {/* Operations Content Area */}
+      {loading ? (
+        <div style={skeletonBox}>
+          {[...Array(6)].map((_, i) => (
+            <div key={i} style={skeletonCard} />
+          ))}
+        </div>
+      ) : orders.length === 0 ? (
+        <div style={emptyState}>
+          <div style={emptyIcon}>☕</div>
+          <h3 style={emptyTitle}>No orders match the current criteria</h3>
+          <p style={emptyText}>Try clearing search parameters or status filters.</p>
+        </div>
+      ) : viewMode === 'cards' ? (
+        /* Shopify/Linear Inspired Operations Cards List */
+        <div style={cardsGrid}>
+          {paginatedOrders.map((o) => {
+            const displayId = o.id.startsWith('SB') || o.id.startsWith('STB') ? o.id : `SB${o.id.substring(0, 4).toUpperCase()}`;
+            const customerName = o.user?.name || o.customerName || o.address?.name || 'Guest Customer';
+            const totalInInr = (o.total / 100).toFixed(2);
+            const createdDateStr = new Date(o.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
-      <div className="recent-orders-card" style={{ overflowX: 'auto' }}>
-        {loading ? (
-          <div style={skeletonBox}>
-            {[...Array(8)].map((_, i) => (
-              <div key={i} style={skeletonRow}>
-                <div style={{ ...skeletonCell, width: '2rem' }} />
-                <div style={{ ...skeletonCell, width: '8rem' }} />
-                <div style={{ ...skeletonCell, width: '7rem' }} />
-                <div style={{ ...skeletonCell, width: '9rem' }} />
-                <div style={{ ...skeletonCell, width: '5rem' }} />
-                <div style={{ ...skeletonCell, width: '5rem' }} />
-                <div style={{ ...skeletonCell, width: '5rem' }} />
-                <div style={{ ...skeletonCell, width: '5rem' }} />
+            return (
+              <div key={o.id} style={opCardStyle}>
+                <div style={opCardHeader}>
+                  <div>
+                    <div style={orderIdTag}>#{displayId}</div>
+                    <div style={customerNameStyle}>{customerName}</div>
+                  </div>
+                  <div style={amountTag}>₹{totalInInr}</div>
+                </div>
+
+                <div style={cardDivider} />
+
+                <div style={cardMetaRow}>
+                  <div>
+                    <div style={metaLabel}>Current Stage</div>
+                    <StatusBadge type="order" value={o.status} />
+                  </div>
+                  <div>
+                    <div style={metaLabel}>Payment</div>
+                    <StatusBadge type="payment" value={o.paymentStatus} />
+                  </div>
+                  <div>
+                    <div style={metaLabel}>Date</div>
+                    <div style={dateVal}>{createdDateStr}</div>
+                  </div>
+                </div>
+
+                <div style={cardActionRow}>
+                  <Link to={`/admin/orders/${o.id}`} style={openOrderBtn}>
+                    Open Order Workspace <ArrowRight size={15} />
+                  </Link>
+                </div>
               </div>
-            ))}
-          </div>
-        ) : orders.length === 0 ? (
-          <div style={emptyState}>
-            <div style={emptyIcon}>📦</div>
-            <h3 style={emptyTitle}>No orders matched</h3>
-            <p style={emptyText}>Try adjusting your search filters to find what you are looking for.</p>
-          </div>
-        ) : (
-          <OrdersTable
-            orders={paginatedOrders}
-            selectedIds={selectedIds}
-            onSelectRow={handleSelectRow}
-            onSelectAll={handleSelectAll}
-            onDeleteOrder={handleDeleteOrder}
-          />
-        )}
-      </div>
+            );
+          })}
+        </div>
+      ) : (
+        /* Alternative Condensed List */
+        <div className="recent-orders-card" style={{ overflowX: 'auto' }}>
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Order ID</th>
+                <th>Customer</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Payment</th>
+                <th>Date</th>
+                <th style={{ textAlign: 'right', paddingRight: '1rem' }}>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedOrders.map((o) => (
+                <tr key={o.id}>
+                  <td style={{ fontFamily: 'monospace', fontWeight: 'bold', color: 'var(--accent-admin-amber)' }}>#{o.id}</td>
+                  <td style={{ fontWeight: 600 }}>{o.user?.name || o.customerName || 'Customer'}</td>
+                  <td style={{ fontWeight: 600 }}>₹{(o.total / 100).toFixed(2)}</td>
+                  <td><StatusBadge type="order" value={o.status} /></td>
+                  <td><StatusBadge type="payment" value={o.paymentStatus} /></td>
+                  <td style={{ fontSize: '0.75rem', color: 'var(--text-admin-muted)' }}>{new Date(o.createdAt).toLocaleDateString()}</td>
+                  <td style={{ textAlign: 'right', paddingRight: '1rem' }}>
+                    <Link to={`/admin/orders/${o.id}`} style={tableOpenBtn}>
+                      Open Order →
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Pagination */}
       {totalPages > 1 && (
@@ -233,7 +279,6 @@ export default function OrdersPage() {
                 </button>
               );
             })}
-            {totalPages > 5 && <span style={{ color: 'var(--text-admin-muted)', padding: '0 0.25rem' }}>…</span>}
             <button
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               style={pageBtn}
@@ -245,16 +290,14 @@ export default function OrdersPage() {
         </div>
       )}
 
-      {/* Toast */}
-      {toastMsg && (
-        <div style={toast}>{toastMsg}</div>
-      )}
+      {/* Toast Notification */}
+      {toastMsg && <div style={toastStyle}>{toastMsg}</div>}
 
       {/* Delete Confirmation Modal */}
       <ConfirmationModal
         isOpen={showDeleteModal}
         title="Delete Order"
-        message="Are you sure you want to permanently delete this order? This action cannot be undone."
+        message="Are you sure you want to delete this order record? Action cannot be undone."
         confirmText="Delete Order"
         onConfirm={confirmDelete}
         onCancel={() => { setShowDeleteModal(false); setPendingDeleteId(null); }}
@@ -263,59 +306,240 @@ export default function OrdersPage() {
   );
 }
 
-// Styles
-const refreshBtn = {
-  background: 'rgba(253, 224, 193, 0.02)',
+// Inline Styles matching Spill The Beans Admin Aesthetics
+const containerStyle = {
+  maxWidth: '1300px',
+  width: '100%',
+};
+
+const headerActionsRow = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '0.75rem',
+};
+
+const viewToggleGroup = {
+  display: 'flex',
+  background: 'rgba(253, 224, 193, 0.03)',
   border: '1px solid var(--border-admin)',
-  color: 'var(--text-admin-muted)',
-  padding: '0.4rem',
   borderRadius: '8px',
+  padding: '0.2rem',
+};
+
+const toggleBtn = {
+  background: 'none',
+  border: 'none',
+  color: 'var(--text-admin-muted)',
+  padding: '0.3rem 0.65rem',
+  borderRadius: '6px',
+  fontSize: '0.75rem',
   cursor: 'pointer',
   display: 'flex',
-  alignItems: 'center'
+  alignItems: 'center',
+  gap: '0.35rem',
+};
+
+const activeToggleBtn = {
+  background: 'var(--accent-admin-amber)',
+  border: 'none',
+  color: '#FFFFFF',
+  padding: '0.3rem 0.65rem',
+  borderRadius: '6px',
+  fontSize: '0.75rem',
+  cursor: 'pointer',
+  fontWeight: 600,
+  display: 'flex',
+  alignItems: 'center',
+  gap: '0.35rem',
+};
+
+const refreshBtn = {
+  background: 'none',
+  border: '1px solid var(--border-admin)',
+  color: 'var(--text-admin-bright)',
+  padding: '0.4rem 0.75rem',
+  borderRadius: '8px',
+  fontSize: '0.8125rem',
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '0.35rem',
+  fontWeight: 600,
+};
+
+const metricsGrid = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(4, 1fr)',
+  gap: '1rem',
+  marginBottom: '1.5rem',
+};
+
+const metricCard = {
+  background: 'var(--bg-admin-card)',
+  border: '1px solid var(--border-admin)',
+  borderRadius: '12px',
+  padding: '1.1rem',
+};
+
+const metricHeader = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: '0.5rem',
+};
+
+const metricLabel = {
+  fontSize: '0.75rem',
+  color: 'var(--text-admin-muted)',
+  fontWeight: 600,
+};
+
+const metricValue = {
+  fontSize: '1.6rem',
+  fontWeight: 800,
+  color: 'var(--text-admin-bright)',
+};
+
+const cardsGrid = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+  gap: '1.25rem',
+  marginBottom: '1.5rem',
+};
+
+const opCardStyle = {
+  background: 'var(--bg-admin-card)',
+  border: '1px solid var(--border-admin)',
+  borderRadius: '14px',
+  padding: '1.25rem',
+  display: 'flex',
+  flexDirection: 'column',
+  justifyContent: 'space-between',
+  transition: 'transform 0.2s ease, border-color 0.2s ease',
+  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+};
+
+const opCardHeader = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'flex-start',
+};
+
+const orderIdTag = {
+  fontFamily: 'monospace',
+  fontSize: '1.1rem',
+  fontWeight: 800,
+  color: 'var(--accent-admin-amber)',
+  letterSpacing: '0.5px',
+};
+
+const customerNameStyle = {
+  fontSize: '0.95rem',
+  fontWeight: 600,
+  color: 'var(--text-admin-bright)',
+  marginTop: '0.2rem',
+};
+
+const amountTag = {
+  fontSize: '1.15rem',
+  fontWeight: 800,
+  color: 'var(--text-admin-bright)',
+};
+
+const cardDivider = {
+  borderTop: '1px dashed var(--border-admin)',
+  margin: '1rem 0',
+};
+
+const cardMetaRow = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  marginBottom: '1.25rem',
+  gap: '0.5rem',
+};
+
+const metaLabel = {
+  fontSize: '0.65rem',
+  textTransform: 'uppercase',
+  color: 'var(--text-admin-muted)',
+  fontWeight: 700,
+  marginBottom: '0.25rem',
+};
+
+const dateVal = {
+  fontSize: '0.75rem',
+  color: 'var(--text-admin-bright)',
+  fontWeight: 500,
+  marginTop: '0.2rem',
+};
+
+const cardActionRow = {
+  display: 'flex',
+  justifyContent: 'stretch',
+};
+
+const openOrderBtn = {
+  width: '100%',
+  background: 'rgba(253, 224, 193, 0.05)',
+  border: '1px solid var(--accent-admin-amber)',
+  color: 'var(--accent-admin-amber)',
+  borderRadius: '8px',
+  padding: '0.6rem 1rem',
+  fontSize: '0.85rem',
+  fontWeight: 700,
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '0.5rem',
+  textDecoration: 'none',
+  transition: 'background 0.2s ease',
+};
+
+const tableOpenBtn = {
+  color: 'var(--accent-admin-amber)',
+  fontWeight: 700,
+  textDecoration: 'none',
+  fontSize: '0.8125rem',
 };
 
 const skeletonBox = {
-  padding: '1rem',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '0.75rem'
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+  gap: '1.25rem',
 };
 
-const skeletonRow = {
-  display: 'flex',
-  gap: '1rem',
-  alignItems: 'center'
-};
-
-const skeletonCell = {
-  height: '14px',
-  borderRadius: '4px',
+const skeletonCard = {
+  height: '180px',
+  borderRadius: '14px',
   background: 'rgba(253, 224, 193, 0.04)',
-  animation: 'pulse 1.5s ease-in-out infinite'
+  animation: 'pulse 1.5s ease-in-out infinite',
 };
 
 const emptyState = {
   padding: '4rem',
-  textAlign: 'center'
+  textAlign: 'center',
+  background: 'var(--bg-admin-card)',
+  borderRadius: '14px',
+  border: '1px solid var(--border-admin)',
 };
 
 const emptyIcon = {
   fontSize: '3rem',
-  marginBottom: '1rem'
+  marginBottom: '1rem',
 };
 
 const emptyTitle = {
   fontSize: '1.125rem',
   fontWeight: 600,
   color: 'var(--text-admin-bright)',
-  margin: '0 0 0.5rem 0'
+  margin: '0 0 0.5rem 0',
 };
 
 const emptyText = {
   color: 'var(--text-admin-muted)',
   fontSize: '0.875rem',
-  margin: 0
+  margin: 0,
 };
 
 const paginationRow = {
@@ -324,17 +548,17 @@ const paginationRow = {
   justifyContent: 'space-between',
   marginTop: '1.5rem',
   flexWrap: 'wrap',
-  gap: '1rem'
+  gap: '1rem',
 };
 
 const paginationInfo = {
   fontSize: '0.75rem',
-  color: 'var(--text-admin-muted)'
+  color: 'var(--text-admin-muted)',
 };
 
 const paginationBtns = {
   display: 'flex',
-  gap: '0.25rem'
+  gap: '0.25rem',
 };
 
 const pageBtn = {
@@ -344,7 +568,7 @@ const pageBtn = {
   padding: '0.3rem 0.65rem',
   borderRadius: '6px',
   fontSize: '0.75rem',
-  cursor: 'pointer'
+  cursor: 'pointer',
 };
 
 const activePageBtn = {
@@ -355,10 +579,10 @@ const activePageBtn = {
   borderRadius: '6px',
   fontSize: '0.75rem',
   cursor: 'pointer',
-  fontWeight: 600
+  fontWeight: 600,
 };
 
-const toast = {
+const toastStyle = {
   position: 'fixed',
   bottom: '2rem',
   right: '2rem',
@@ -370,5 +594,4 @@ const toast = {
   fontWeight: 600,
   zIndex: 1000,
   boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
-  animation: 'slideUp 0.3s ease-out'
 };

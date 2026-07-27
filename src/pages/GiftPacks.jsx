@@ -1,6 +1,5 @@
-import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { ArrowRight, Gift, MessageSquare, Truck } from 'lucide-react';
+import { Gift, MessageSquare } from 'lucide-react';
 import { getProductsByCategory, CATEGORIES } from '../data/products';
 import ProductCard from '../components/ProductCard';
 import NewsletterSection from '../components/NewsletterSection';
