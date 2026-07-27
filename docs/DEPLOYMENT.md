@@ -51,8 +51,9 @@ docker exec -it stb_api npx prisma db push
    - Framework Preset: **Vite**
    - Build Command: `npm run build`
    - Output Directory: `dist`
-4. Input the required frontend Environment Variables.
-5. Click **Deploy**.
+4. Ensure `vercel.json` exists in root to rewrite all routes to `/index.html` (prevents 404 on page refresh/direct URL navigation like `/cart`).
+5. Input the required frontend Environment Variables.
+6. Click **Deploy**.
 
 ### Backend: Railway or Render
 1. Select the `server` directory or use `Dockerfile` inside `/server` to deploy.
