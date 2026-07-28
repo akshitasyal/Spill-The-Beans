@@ -2,38 +2,28 @@ name: Deploy Backend to Render
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
     paths:
-      - 'server/**'
-      - 'package.json'
+      - "server/**"
+      - "package.json"
 
 jobs:
   deploy:
     name: Trigger Render Build
     runs-on: ubuntu-latest
-    steps:
-      - name: Start GitHub Deployment Status
-        uses: bobheadxi/deployments@v1
-        id: deployment
-        with:
-          step: start
-          token: ${{ secrets.GITHUB_TOKEN }}
-          env: render-production
 
+    steps:
       - name: Trigger Render Deploy Hook
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
         run: |
-          if [ -n "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" ]; then
-            curl -s -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
-          else
-            echo "RENDER_DEPLOY_HOOK_URL secret not set. Skipping trigger."
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "❌ RENDER_DEPLOY_HOOK_URL secret is not set."
+            exit 1
           fi
 
-      - name: Update GitHub Deployment Status
-        uses: bobheadxi/deployments@v1
-        if: always()
-        with:
-          step: finish
-          token: ${{ secrets.GITHUB_TOKEN }}
-          status: ${{ job.status }}
-          deployment_id: ${{ steps.deployment.outputs.deployment_id }}
-          env_url: https://spill-the-beans.onrender.com
+          echo "🚀 Triggering Render deployment..."
+          curl -X POST "$RENDER_DEPLOY_HOOK_URL"
+
+          echo "✅ Render deployment triggered successfully."
