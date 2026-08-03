@@ -1,3 +1,5 @@
+import { fetchWithAuth } from './apiClient';
+
 const API_BASE_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/admin`;
 
 export const OrderService = {
@@ -8,21 +10,20 @@ export const OrderService = {
         queryParams.append(k, v);
       }
     });
-    const res = await fetch(`${API_BASE_URL}/orders?${queryParams.toString()}`);
+    const res = await fetchWithAuth(`${API_BASE_URL}/orders?${queryParams.toString()}`);
     if (!res.ok) throw new Error('Failed to load orders');
     return await res.json();
   },
 
   async getOrder(id) {
-    const res = await fetch(`${API_BASE_URL}/orders/${id}`);
+    const res = await fetchWithAuth(`${API_BASE_URL}/orders/${id}`);
     if (!res.ok) throw new Error('Order not found');
     return await res.json();
   },
 
   async updateOrder(id, orderData) {
-    const res = await fetch(`${API_BASE_URL}/orders/${id}`, {
+    const res = await fetchWithAuth(`${API_BASE_URL}/orders/${id}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(orderData),
     });
     if (!res.ok) throw new Error('Could not update order');
@@ -30,9 +31,8 @@ export const OrderService = {
   },
 
   async updateCourierDetails(id, courierData) {
-    const res = await fetch(`${API_BASE_URL}/orders/${id}/courier`, {
+    const res = await fetchWithAuth(`${API_BASE_URL}/orders/${id}/courier`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(courierData),
     });
     if (!res.ok) throw new Error('Could not update courier details');
@@ -40,9 +40,8 @@ export const OrderService = {
   },
 
   async logAdminAction(id, auditData) {
-    const res = await fetch(`${API_BASE_URL}/orders/${id}/audit-log`, {
+    const res = await fetchWithAuth(`${API_BASE_URL}/orders/${id}/audit-log`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(auditData),
     });
     if (!res.ok) throw new Error('Could not log audit action');
@@ -50,7 +49,7 @@ export const OrderService = {
   },
 
   async deleteOrder(id) {
-    const res = await fetch(`${API_BASE_URL}/orders/${id}`, {
+    const res = await fetchWithAuth(`${API_BASE_URL}/orders/${id}`, {
       method: 'DELETE',
     });
     if (!res.ok) throw new Error('Could not delete order');

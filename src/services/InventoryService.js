@@ -1,8 +1,10 @@
+import { fetchWithAuth } from './apiClient';
+
 const API_BASE_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/admin`;
 
 export const InventoryService = {
   async getInventory() {
-    const res = await fetch(`${API_BASE_URL}/inventory`);
+    const res = await fetchWithAuth(`${API_BASE_URL}/inventory`);
     if (!res.ok) throw new Error('Failed to load inventory');
     return await res.json();
   },
@@ -15,9 +17,8 @@ export const InventoryService = {
       : null;
     const previousStock = currentItem?.stock ?? 0;
 
-    const res = await fetch(`${API_BASE_URL}/inventory/${id}`, {
+    const res = await fetchWithAuth(`${API_BASE_URL}/inventory/${id}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ stock: stockCount }),
     });
     if (!res.ok) throw new Error('Could not update inventory stock');
@@ -25,9 +26,8 @@ export const InventoryService = {
 
     // Log the change to the inventory history
     try {
-      await fetch(`${API_BASE_URL}/inventory/history`, {
+      await fetchWithAuth(`${API_BASE_URL}/inventory/history`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           productId: id,
           productName: currentItem?.name || 'Unknown Product',
@@ -46,9 +46,8 @@ export const InventoryService = {
   },
 
   async updateThreshold(id, threshold) {
-    const res = await fetch(`${API_BASE_URL}/products/${id}`, {
+    const res = await fetchWithAuth(`${API_BASE_URL}/products/${id}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ lowStockThreshold: parseInt(threshold) }),
     });
     if (!res.ok) throw new Error('Could not update threshold');
@@ -56,9 +55,10 @@ export const InventoryService = {
   },
 
   async getInventoryHistory() {
-    const res = await fetch(`${API_BASE_URL}/inventory/history`);
+    const res = await fetchWithAuth(`${API_BASE_URL}/inventory/history`);
     if (!res.ok) return { success: true, data: [] };
     return await res.json();
-  }
+  },
 };
+
 

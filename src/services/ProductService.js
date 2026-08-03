@@ -1,3 +1,5 @@
+import { fetchWithAuth } from './apiClient';
+
 const API_BASE_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/admin`;
 
 export const ProductService = {
@@ -13,22 +15,21 @@ export const ProductService = {
       limit: String(limit),
     });
 
-    const res = await fetch(`${API_BASE_URL}/products?${queryParams.toString()}`);
+    const res = await fetchWithAuth(`${API_BASE_URL}/products?${queryParams.toString()}`);
     if (!res.ok) throw new Error('Failed to load products');
     return await res.json();
   },
 
   async getProduct(id) {
-    const res = await fetch(`${API_BASE_URL}/products/${id}`);
+    const res = await fetchWithAuth(`${API_BASE_URL}/products/${id}`);
     if (!res.ok) throw new Error('Product not found');
     const payload = await res.json();
     return payload.data;
   },
 
   async createProduct(productData) {
-    const res = await fetch(`${API_BASE_URL}/products`, {
+    const res = await fetchWithAuth(`${API_BASE_URL}/products`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(productData),
     });
     if (!res.ok) throw new Error('Could not create product');
@@ -36,9 +37,8 @@ export const ProductService = {
   },
 
   async updateProduct(id, productData) {
-    const res = await fetch(`${API_BASE_URL}/products/${id}`, {
+    const res = await fetchWithAuth(`${API_BASE_URL}/products/${id}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(productData),
     });
     if (!res.ok) throw new Error('Could not update product');
@@ -46,7 +46,7 @@ export const ProductService = {
   },
 
   async deleteProduct(id) {
-    const res = await fetch(`${API_BASE_URL}/products/${id}`, {
+    const res = await fetchWithAuth(`${API_BASE_URL}/products/${id}`, {
       method: 'DELETE',
     });
     if (!res.ok) throw new Error('Could not delete product');

@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+import { fetchWithAuth } from '../../services/apiClient';
+
 const API_BASE_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/admin`;
 
 // Reusable KPI Card Component
@@ -148,9 +150,9 @@ export default function Dashboard() {
     async function loadDashboardStats() {
       try {
         const [ordersRes, customersRes, productsRes] = await Promise.allSettled([
-          fetch(`${API_BASE_URL}/orders`).then(r => r.json()),
-          fetch(`${API_BASE_URL}/customers`).then(r => r.json()),
-          fetch(`${API_BASE_URL}/inventory`).then(r => r.json()),
+          fetchWithAuth(`${API_BASE_URL}/orders`).then(r => r.json()),
+          fetchWithAuth(`${API_BASE_URL}/customers`).then(r => r.json()),
+          fetchWithAuth(`${API_BASE_URL}/inventory`).then(r => r.json()),
         ]);
 
         const orders = ordersRes.status === 'fulfilled' && ordersRes.value.success ? ordersRes.value.data : [];

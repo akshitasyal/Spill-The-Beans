@@ -1,10 +1,12 @@
+import { fetchWithAuth } from './apiClient';
+
 const API_BASE_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/admin`;
 
 export const ReviewService = {
   async getReviews() {
     let apiReviews = [];
     try {
-      const res = await fetch(`${API_BASE_URL}/reviews`);
+      const res = await fetchWithAuth(`${API_BASE_URL}/reviews`);
       if (res.ok) {
         const json = await res.json();
         if (json.success && Array.isArray(json.data)) {

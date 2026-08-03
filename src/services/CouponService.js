@@ -1,3 +1,5 @@
+import { fetchWithAuth } from './apiClient';
+
 const API_BASE_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/admin`;
 
 const MOCK_COUPONS = [
@@ -25,7 +27,7 @@ function saveLocalCoupons(coupons) {
 export const CouponService = {
   async getCoupons() {
     try {
-      const res = await fetch(`${API_BASE_URL}/coupons`);
+      const res = await fetchWithAuth(`${API_BASE_URL}/coupons`);
       if (!res.ok) throw new Error('API server error');
       return await res.json();
     } catch (err) {
@@ -37,9 +39,8 @@ export const CouponService = {
 
   async createCoupon(couponData) {
     try {
-      const res = await fetch(`${API_BASE_URL}/coupons`, {
+      const res = await fetchWithAuth(`${API_BASE_URL}/coupons`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(couponData)
       });
       if (!res.ok) throw new Error('Could not create coupon');
@@ -72,9 +73,8 @@ export const CouponService = {
 
   async updateCoupon(id, couponData) {
     try {
-      const res = await fetch(`${API_BASE_URL}/coupons/${id}`, {
+      const res = await fetchWithAuth(`${API_BASE_URL}/coupons/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(couponData)
       });
       if (!res.ok) throw new Error('Could not update coupon');
