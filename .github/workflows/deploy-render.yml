@@ -12,12 +12,19 @@ jobs:
   deploy:
     name: Trigger Render Build
     runs-on: ubuntu-latest
+<<<<<<< HEAD
 
+=======
+    environment:
+      name: render-production
+      url: https://spill-the-beans.onrender.com
+>>>>>>> 191878b (Require authentication before checkout)
     steps:
       - name: Trigger Render Deploy Hook
         env:
           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
         run: |
+<<<<<<< HEAD
           if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
             echo "❌ RENDER_DEPLOY_HOOK_URL secret is not set."
             exit 1
@@ -27,3 +34,12 @@ jobs:
           curl -X POST "$RENDER_DEPLOY_HOOK_URL"
 
           echo "✅ Render deployment triggered successfully."
+=======
+          if [ -n "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" ]; then
+            curl -s -f -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
+            echo "Successfully triggered Render deployment hook."
+          else
+            echo "RENDER_DEPLOY_HOOK_URL secret not set in GitHub Secrets. Skipping deploy hook call."
+          fi
+
+>>>>>>> 191878b (Require authentication before checkout)

@@ -1,7 +1,8 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import './Auth.css';
 
 /* ---- Icons (inline SVGs to avoid extra deps) ---- */
@@ -142,9 +143,10 @@ function LoginForm({ onSuccess }) {
     setLoading(true);
     // Simulate API call
     await new Promise(r => setTimeout(r, 1400));
-    login({ email: form.email, name: form.email.split('@')[0] });
+    const authUser = { email: form.email, name: form.email.split('@')[0] };
+    login(authUser);
     setLoading(false);
-    onSuccess('login');
+    onSuccess('login', authUser);
   };
 
   return (
@@ -231,9 +233,10 @@ function SignupForm({ onSuccess }) {
     setErrors({});
     setLoading(true);
     await new Promise(r => setTimeout(r, 1600));
-    login({ email: form.email, name: `${form.firstName} ${form.lastName}` });
+    const authUser = { email: form.email, name: `${form.firstName} ${form.lastName}` };
+    login(authUser);
     setLoading(false);
-    onSuccess('signup');
+    onSuccess('signup', authUser);
   };
 
   return (
@@ -403,15 +406,34 @@ export default function Auth() {
   const [tab, setTab] = useState('login');
   const [done, setDone] = useState(null);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
+  const { mergeCartWithBackend } = useCart();
 
-  const handleSuccess = useCallback((type) => {
-    setDone(type);
-  }, []);
+  // Resolve redirect destination: query param → sessionStorage → default
+  const redirectTarget =
+    searchParams.get('redirect') ||
+    sessionStorage.getItem('auth_redirect') ||
+    '/shop';
+
+  const handleSuccess = useCallback(async (type, authUser) => {
+    // Merge guest cart before redirect
+    if (authUser) {
+      try { await mergeCartWithBackend(authUser); } catch (_) {}
+    }
+    // If there is an explicit redirect destination, go there immediately
+    if (redirectTarget && redirectTarget !== '/shop') {
+      sessionStorage.removeItem('auth_redirect');
+      navigate(redirectTarget);
+    } else {
+      setDone(type);
+    }
+  }, [navigate, redirectTarget, mergeCartWithBackend]);
 
   const handleContinue = useCallback(() => {
-    navigate('/shop');
-  }, [navigate]);
+    sessionStorage.removeItem('auth_redirect');
+    navigate(redirectTarget);
+  }, [navigate, redirectTarget]);
 
   return (
     <>

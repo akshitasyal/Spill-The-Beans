@@ -1,12 +1,15 @@
 import { useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { X, Plus, Minus, Trash2, ShoppingBag, ArrowRight } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useCurrency } from '../context/CurrencyContext';
+import { useAuth } from '../context/AuthContext';
 import './CartDrawer.css';
 
 export default function CartDrawer() {
   const { items, isOpen, toggleDrawer, removeItem, updateQuantity, subtotal, savings, itemCount } = useCart();
+  const { isLoggedIn, openAuthModal } = useAuth();
+  const navigate = useNavigate();
   const drawerRef = useRef(null);
   const { formatPrice } = useCurrency();
 
@@ -171,15 +174,24 @@ export default function CartDrawer() {
                 <span>{formatPrice(total)}</span>
               </div>
             </div>
-            <Link
-              to="/cart"
+            <button
               className="btn btn-primary w-full"
               id="cart-checkout-btn"
-              onClick={() => toggleDrawer(false)}
+              onClick={() => {
+                toggleDrawer(false);
+                if (!isLoggedIn) {
+                  openAuthModal({
+                    message: 'Please sign in to continue your purchase.',
+                    redirectUrl: '/checkout',
+                  });
+                } else {
+                  navigate('/checkout');
+                }
+              }}
               style={{ justifyContent: 'center' }}
             >
               Proceed to Checkout <ArrowRight size={16} />
-            </Link>
+            </button>
             <button
               className="btn btn-ghost w-full text-center"
               style={{ justifyContent: 'center', marginTop: '0.5rem' }}

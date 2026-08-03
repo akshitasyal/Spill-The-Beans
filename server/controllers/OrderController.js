@@ -206,48 +206,40 @@ export const OrderController = {
    * POST /api/orders/checkout-direct
    * Place an order directly from the frontend cart (no server-side cart required).
    * Accepts cart items + address fields inline, creates Address + Order in one transaction.
+   * REQUIRES authentication — clerkId header must be present.
    */
   async checkoutDirect(req, res, next) {
     try {
       const clerkId = req.headers['x-clerk-id'];
-      const { userEmail, name } = req.body;
 
+      // ── Authentication guard ──────────────────────────────────────────
+      // This endpoint must NEVER allow unauthenticated order creation.
+      // Even if the frontend is compromised, the backend enforces auth here.
+      if (!clerkId) {
+        return res.status(401).json({
+          success: false,
+          message: 'Authentication required. Please sign in to place an order.',
+        });
+      }
+
+      const { userEmail, name } = req.body;
       let userId;
 
-      if (clerkId) {
-        let user = await UserRepository.findByClerkId(clerkId);
-        if (!user) {
-          const userEmailFinal = userEmail || `${clerkId}@clerk.user`;
-          user = await prisma.user.upsert({
-            where: { clerkId },
-            update: { email: userEmailFinal },
-            create: {
-              clerkId,
-              email: userEmailFinal,
-              name: name || userEmailFinal.split('@')[0] || 'Coffee Lover',
-            },
-          });
-        }
-        userId = user.id;
-      } else if (userEmail) {
-        let user = await prisma.user.findUnique({ where: { email: userEmail } });
-        if (!user) {
-          const pseudoClerkId = `email_${userEmail.replace(/[^a-zA-Z0-9]/g, '_')}`;
-          user = await prisma.user.upsert({
-            where: { clerkId: pseudoClerkId },
-            update: { email: userEmail },
-            create: { clerkId: pseudoClerkId, email: userEmail, name: name || userEmail.split('@')[0] },
-          });
-        }
-        userId = user.id;
-      } else {
-        const guestEmail = `guest_${Date.now()}@spillthebeans.in`;
-        const pseudoClerkId = `guest_${Date.now()}`;
-        const user = await prisma.user.create({
-          data: { clerkId: pseudoClerkId, email: guestEmail, name: name || 'Guest Customer' },
+      // Resolve or auto-provision the authenticated user record in DB
+      let user = await UserRepository.findByClerkId(clerkId);
+      if (!user) {
+        const userEmailFinal = userEmail || `${clerkId}@clerk.user`;
+        user = await prisma.user.upsert({
+          where: { clerkId },
+          update: { email: userEmailFinal },
+          create: {
+            clerkId,
+            email: userEmailFinal,
+            name: name || userEmailFinal.split('@')[0] || 'Coffee Lover',
+          },
         });
-        userId = user.id;
       }
+      userId = user.id;
 
       const {
         // Address fields
@@ -384,6 +376,55 @@ export const OrderController = {
       });
     } catch (err) {
       console.error('[CHECKOUT_DIRECT_ERROR]', err);
+      next(err);
+    }
+  },
+
+  /**
+   * PATCH /api/orders/:id/cancel
+   * Cancel an eligible order (PENDING or CONFIRMED status only).
+   * Requires authentication — verifies the order belongs to the requesting user.
+   */
+  async cancelOrder(req, res, next) {
+    try {
+      // req.user is set by requireAuth middleware
+      if (!req.user) {
+        return res.status(401).json({ success: false, message: 'Authentication required.' });
+      }
+
+      const userId = req.user.id;
+      const order = await OrderRepository.findById(req.params.id);
+
+      if (!order) {
+        return res.status(404).json({ success: false, message: 'Order not found.' });
+      }
+
+      // Ownership check — users can only cancel their own orders
+      if (order.userId !== userId) {
+        return res.status(403).json({ success: false, message: 'Forbidden. You can only cancel your own orders.' });
+      }
+
+      // Only allow cancellation for cancellable statuses
+      const cancellableStatuses = ['PENDING', 'CONFIRMED'];
+      if (!cancellableStatuses.includes(order.status)) {
+        return res.status(400).json({
+          success: false,
+          message: `Cannot cancel an order with status "${order.status}". Only PENDING or CONFIRMED orders can be cancelled.`,
+        });
+      }
+
+      // Update order status to CANCELLED
+      const updatedOrder = await prisma.order.update({
+        where: { id: order.id },
+        data: { status: 'CANCELLED', updatedAt: new Date() },
+      });
+
+      res.json({
+        success: true,
+        data: updatedOrder,
+        message: 'Order cancelled successfully.',
+      });
+    } catch (err) {
       next(err);
     }
   },

@@ -3,8 +3,14 @@
 // ============================================================
 import { Router } from 'express';
 import { AdminController } from '../controllers/AdminController.js';
+import { requireAuth, requireAdmin } from '../middleware/auth.js';
 
 const router = Router();
+
+// Protect all admin endpoints
+router.use(requireAuth);
+router.use(requireAdmin);
+
 
 // ── Products ──────────────────────────────────────────────
 router.get('/products',          AdminController.listProducts);

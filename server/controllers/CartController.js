@@ -5,9 +5,12 @@ import { CartRepository } from '../repositories/CartRepository.js';
 import { UserRepository } from '../repositories/UserRepository.js';
 
 /**
- * Helper: resolve userId from clerkId header/param
+ * Helper: resolve userId from req.user or header
  */
-async function resolveUserId(clerkId) {
+async function getUserIdFromReq(req) {
+  if (req.user?.id) return req.user.id;
+  const clerkId = req.headers['x-clerk-id'];
+  if (!clerkId) throw Object.assign(new Error('Unauthorized.'), { status: 401 });
   const user = await UserRepository.findByClerkId(clerkId);
   if (!user) throw Object.assign(new Error('User not found.'), { status: 404 });
   return user.id;
@@ -17,14 +20,10 @@ export const CartController = {
   /**
    * GET /api/cart
    * Get the authenticated user's cart
-   * Requires header: x-clerk-id
    */
   async getCart(req, res, next) {
     try {
-      const clerkId = req.headers['x-clerk-id'];
-      if (!clerkId) return res.status(401).json({ success: false, message: 'Unauthorized.' });
-
-      const userId = await resolveUserId(clerkId);
+      const userId = await getUserIdFromReq(req);
       const cart = await CartRepository.getOrCreateCart(userId);
       res.json({ success: true, data: cart });
     } catch (err) {
@@ -38,10 +37,7 @@ export const CartController = {
    */
   async addItem(req, res, next) {
     try {
-      const clerkId = req.headers['x-clerk-id'];
-      if (!clerkId) return res.status(401).json({ success: false, message: 'Unauthorized.' });
-
-      const userId = await resolveUserId(clerkId);
+      const userId = await getUserIdFromReq(req);
       const { productId, quantity, variant } = req.body;
 
       await CartRepository.addItem(userId, { productId, quantity, variant });
@@ -59,10 +55,7 @@ export const CartController = {
    */
   async updateItem(req, res, next) {
     try {
-      const clerkId = req.headers['x-clerk-id'];
-      if (!clerkId) return res.status(401).json({ success: false, message: 'Unauthorized.' });
-
-      const userId = await resolveUserId(clerkId);
+      const userId = await getUserIdFromReq(req);
       await CartRepository.updateItemQuantity(userId, req.params.itemId, req.body.quantity);
       const cart = await CartRepository.getOrCreateCart(userId);
 
@@ -78,10 +71,7 @@ export const CartController = {
    */
   async removeItem(req, res, next) {
     try {
-      const clerkId = req.headers['x-clerk-id'];
-      if (!clerkId) return res.status(401).json({ success: false, message: 'Unauthorized.' });
-
-      const userId = await resolveUserId(clerkId);
+      const userId = await getUserIdFromReq(req);
       await CartRepository.removeItem(userId, req.params.itemId);
       const cart = await CartRepository.getOrCreateCart(userId);
 
@@ -97,13 +87,26 @@ export const CartController = {
    */
   async clearCart(req, res, next) {
     try {
-      const clerkId = req.headers['x-clerk-id'];
-      if (!clerkId) return res.status(401).json({ success: false, message: 'Unauthorized.' });
-
-      const userId = await resolveUserId(clerkId);
+      const userId = await getUserIdFromReq(req);
       await CartRepository.clearCart(userId);
 
       res.json({ success: true, message: 'Cart cleared.' });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  /**
+   * POST /api/cart/merge
+   * Merge guest cart items from LocalStorage into DB cart
+   */
+  async mergeCart(req, res, next) {
+    try {
+      const userId = await getUserIdFromReq(req);
+      const { items } = req.body;
+
+      const updatedCart = await CartRepository.mergeCart(userId, Array.isArray(items) ? items : []);
+      res.json({ success: true, data: updatedCart, message: 'Guest cart merged successfully.' });
     } catch (err) {
       next(err);
     }

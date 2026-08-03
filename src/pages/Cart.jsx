@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Plus, Minus, Trash2, ShoppingBag, ArrowRight, Tag, CheckCircle, ArrowLeft } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useCurrency } from '../context/CurrencyContext';
@@ -13,7 +13,8 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 export default function Cart() {
   const { items, removeItem, updateQuantity, subtotal, savings, clearCart } = useCart();
   const { formatPrice } = useCurrency();
-  const { user } = useAuth();
+  const { user, isLoggedIn, openAuthModal } = useAuth();
+  const navigate = useNavigate();
   
   const [promoCode, setPromoCode] = useState('');
   const [promoApplied, setPromoApplied] = useState(null); // stores coupon object
@@ -90,6 +91,18 @@ export default function Cart() {
   };
 
   const handleConfirmOrder = async () => {
+    // ── Authentication guard (defense-in-depth) ─────────────────────────
+    // This check is a secondary guard. The primary guard is ProtectedRoute
+    // on /checkout and the auth check in CartDrawer / Cart page buttons.
+    // The backend ALSO enforces auth independently.
+    if (!user || !isLoggedIn) {
+      openAuthModal({
+        message: 'Please sign in to continue with your purchase.',
+        redirectUrl: '/checkout',
+      });
+      return;
+    }
+
     if (!email || !fullName || !phone || !line1 || !city || !state || !pincode) {
       setValidationError('Please fill out all required fields.');
       return;
@@ -127,24 +140,17 @@ export default function Cart() {
 
       let orderId;
 
-      const userEmailForOrder = user?.email || email;
-
-      if (userEmailForOrder) {
-        // Logged-in user (or has email): persist to DB
-        const res = await fetch(`${API_BASE}/api/orders/checkout-direct`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify(payload),
-        });
-        const data = await res.json();
-        if (!res.ok || !data.success) {
-          throw new Error(data.message || 'Failed to place order. Please try again.');
-        }
-        orderId = data.data?.id || `IMP${Math.floor(Math.random() * 90000) + 10000}`;
-      } else {
-        // Guest with no email: generate a local order ID
-        orderId = `IMP${Math.floor(Math.random() * 90000) + 10000}`;
+      // Always persist order to DB — clerkId is required (backend enforces 401 if missing)
+      const res = await fetch(`${API_BASE}/api/orders/checkout-direct`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Failed to place order. Please try again.');
       }
+      orderId = data.data?.id || `IMP${Math.floor(Math.random() * 90000) + 10000}`;
 
       setPlacedOrderId(orderId);
 
@@ -528,9 +534,13 @@ export default function Cart() {
                     id="cart-place-order-btn"
                     className="btn btn-primary w-full"
                     style={{ justifyContent: 'center' }}
-                    onClick={() => setCheckoutStep('checkout')}
+                    onClick={() => {
+                      // Navigate to /checkout — ProtectedRoute will handle auth check.
+                      // Guest users will see the AuthModal; logged-in users proceed directly.
+                      navigate('/checkout');
+                    }}
                   >
-                    Place Order — {formatPrice(total)} <ArrowRight size={16} />
+                    Proceed to Checkout — {formatPrice(total)} <ArrowRight size={16} />
                   </button>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>

@@ -11,6 +11,9 @@ import Footer from './components/Footer';
 import CartDrawer from './components/CartDrawer';
 import PageLoader from './components/PageLoader';
 import ErrorBoundary from './components/ErrorBoundary';
+import AuthModal from './components/AuthModal';
+import ProtectedRoute from './components/ProtectedRoute';
+import { useAuth } from './context/AuthContext';
 
 // Lazy load standard pages
 const Home = lazy(() => import('./pages/Home'));
@@ -30,6 +33,7 @@ const FlavouredCoffeesPage = lazy(() => import('./pages/FlavouredCoffeesPage'));
 const CoffeeProductivityPage = lazy(() => import('./pages/CoffeeProductivityPage'));
 const NilgiriOriginPage = lazy(() => import('./pages/NilgiriOriginPage'));
 const Cart = lazy(() => import('./pages/Cart'));
+const Checkout = lazy(() => import('./pages/Checkout'));
 const Auth = lazy(() => import('./pages/Auth'));
 const TrackPage = lazy(() => import('./pages/TrackPage'));
 const ReturnsPage = lazy(() => import('./pages/ReturnsPage'));
@@ -71,6 +75,7 @@ const MaintenancePage = lazy(() => import('./pages/errors/MaintenancePage'));
 
 function AppContent() {
   const location = useLocation();
+  const { authModal, closeAuthModal } = useAuth();
   const isAdminPage = location.pathname.startsWith('/admin');
 
   // Check Maintenance Mode environment variable
@@ -84,6 +89,13 @@ function AppContent() {
     <>
       {!isAdminPage && <Navbar />}
       {!isAdminPage && <CartDrawer />}
+      <AuthModal
+        isOpen={authModal?.isOpen}
+        onClose={closeAuthModal}
+        message={authModal?.message}
+        redirectUrl={authModal?.redirectUrl}
+        onAuthSuccess={authModal?.onAuthSuccess}
+      />
       <ErrorBoundary fallback={<ServerErrorPage />}>
         <Suspense fallback={<PageLoader />}>
           <AnimatePresence mode="wait">
@@ -105,12 +117,27 @@ function AppContent() {
               <Route path="/blog/coffee-and-productivity" element={<CoffeeProductivityPage />} />
               <Route path="/blog/nilgiri-hills-coffee-guide" element={<NilgiriOriginPage />} />
               <Route path="/cart" element={<Cart />} />
+              <Route path="/checkout" element={
+                <ProtectedRoute
+                  redirectTo="/checkout"
+                  message="Please login to continue with your purchase."
+                >
+                  <Checkout />
+                </ProtectedRoute>
+              } />
               <Route path="/auth" element={<Auth />} />
               <Route path="/track" element={<TrackPage />} />
               <Route path="/returns" element={<ReturnsPage />} />
               <Route path="/shipping" element={<ShippingPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />
-              <Route path="/profile" element={<Profile />} />
+              <Route path="/profile" element={
+                <ProtectedRoute
+                  redirectTo="/profile"
+                  message="Please sign in to view your account and order history."
+                >
+                  <Profile />
+                </ProtectedRoute>
+              } />
               
               {/* Phase 5 Product Catalog Routes */}
               <Route path="/products" element={<ProductsPage />} />

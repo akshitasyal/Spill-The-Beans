@@ -150,46 +150,63 @@ export default function Profile() {
     }
   };
 
-  // Redirect if not logged in
+  // Redirect if not logged in — save intended path for post-login return
   useEffect(() => {
     if (!isLoggedIn) {
+      sessionStorage.setItem('auth_redirect', '/profile');
       navigate('/auth');
     }
   }, [isLoggedIn, navigate]);
 
-  // Load orders and addresses
+  // Load orders from API & local storage
   useEffect(() => {
-    if (user) {
-      // 1. Load from stb_admin_detailed_orders first
+    if (!user) return;
+
+    const loadOrders = async () => {
+      let apiOrders = [];
+      try {
+        const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+        const clerkId = user.clerkId || user.id;
+        const res = await fetch(`${API_BASE}/api/orders`, {
+          headers: {
+            'x-clerk-id': clerkId,
+            'x-user-email': user.email || '',
+          },
+        });
+        const data = await res.json();
+        if (data.success && Array.isArray(data.data)) {
+          apiOrders = data.data.map(formatOrderForTracking);
+        }
+      } catch (err) {
+        console.error('Failed to fetch orders from API:', err);
+      }
+
+      // Local fallback orders
       const adminOrders = JSON.parse(localStorage.getItem('stb_admin_detailed_orders') || '[]');
-      const userAdminOrders = adminOrders.filter(
-        o => o.userId === user.email || o.customerEmail === user.email || o.email === user.email
-      );
+      const userAdminOrders = adminOrders
+        .filter(o => o.userId === user.email || o.customerEmail === user.email || o.email === user.email)
+        .map(formatOrderForTracking);
 
-      // 2. Load from stb_placed_orders
       const allOrders = JSON.parse(localStorage.getItem('stb_placed_orders') || '{}');
-      const userOrders = Object.values(allOrders).filter(
-        o => o.userId === user.email || o.userEmail === user.email || o.email === user.email
-      );
+      const userOrders = Object.values(allOrders)
+        .filter(o => o.userId === user.email || o.userEmail === user.email || o.email === user.email)
+        .map(formatOrderForTracking);
 
-      // Merge them, prefer adminOrders for tracking status updates
       const mergedMap = {};
-      
-      userOrders.forEach(o => {
-        mergedMap[o.id] = formatOrderForTracking(o);
-      });
-      userAdminOrders.forEach(o => {
-        mergedMap[o.id] = formatOrderForTracking(o);
-      });
+      userOrders.forEach(o => { if (o) mergedMap[o.id] = o; });
+      userAdminOrders.forEach(o => { if (o) mergedMap[o.id] = o; });
+      apiOrders.forEach(o => { if (o) mergedMap[o.id] = o; });
 
       const displayOrders = Object.values(mergedMap);
-      setOrders(displayOrders.sort((a, b) => b.id.localeCompare(a.id)));
+      setOrders(displayOrders.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')));
 
-      // Load user-specific addresses
+      // Load user addresses
       const allAddresses = JSON.parse(localStorage.getItem('stb_saved_addresses') || '[]');
       const userAddresses = allAddresses.filter(a => a.userEmail === user.email);
       setAddresses(userAddresses);
-    }
+    };
+
+    loadOrders();
   }, [user]);
 
   const handleLogout = () => {

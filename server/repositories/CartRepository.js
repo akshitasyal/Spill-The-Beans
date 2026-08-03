@@ -126,4 +126,68 @@ export const CartRepository = {
     });
     return result._sum.quantity ?? 0;
   },
+
+  /**
+   * Merge guest cart items from LocalStorage with user DB cart
+   */
+  async mergeCart(userId, guestItems = []) {
+    const cart = await this.getOrCreateCart(userId);
+
+    for (const item of guestItems) {
+      const quantityToAdd = Math.max(1, Number(item.quantity) || 1);
+      const variantVal = item.variant || null;
+      let targetProductId = item.productId || item.id;
+
+      // If item was passed with slug instead of ID, resolve product ID
+      if (!targetProductId && item.slug) {
+        const prod = await prisma.product.findUnique({ where: { slug: item.slug } });
+        if (prod) targetProductId = prod.id;
+      }
+
+      if (!targetProductId) continue;
+
+      // Verify product exists in database
+      const dbProduct = await prisma.product.findUnique({ where: { id: targetProductId } });
+      if (!dbProduct) {
+        // Try finding by slug if ID failed
+        if (item.slug) {
+          const prodBySlug = await prisma.product.findUnique({ where: { slug: item.slug } });
+          if (prodBySlug) targetProductId = prodBySlug.id;
+          else continue;
+        } else {
+          continue;
+        }
+      }
+
+      const existing = await prisma.cartItem.findUnique({
+        where: {
+          cartId_productId_variant: {
+            cartId: cart.id,
+            productId: targetProductId,
+            variant: variantVal ?? '',
+          },
+        },
+      });
+
+      if (existing) {
+        const newQty = Math.min(existing.quantity + quantityToAdd, 10);
+        await prisma.cartItem.update({
+          where: { id: existing.id },
+          data: { quantity: newQty },
+        });
+      } else {
+        await prisma.cartItem.create({
+          data: {
+            cartId: cart.id,
+            productId: targetProductId,
+            quantity: Math.min(quantityToAdd, 10),
+            variant: variantVal,
+          },
+        });
+      }
+    }
+
+    return this.getOrCreateCart(userId);
+  },
 };
+
