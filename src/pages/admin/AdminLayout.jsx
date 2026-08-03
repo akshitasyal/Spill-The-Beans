@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
-import { useUser, useClerk } from '@clerk/clerk-react';
 import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard, Package, Layers, ShoppingBag, Users, MessageSquare,
@@ -11,7 +10,7 @@ import './AdminLayout.css';
 import SearchModal from '../../components/admin/SearchModal';
 import { NotificationService } from '../../services/NotificationService';
 
-const isClerkEnabled = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+const isClerkEnabled = false;
 
 // Reusable Section Header Component
 export function SectionHeader({ title, subtitle, children }) {
@@ -320,19 +319,6 @@ function AdminLayoutWrapper({ clerkLogout, clerkUser }) {
   );
 }
 
-function AdminLayoutClerk() {
-  const { logout: clerkLogout } = useClerk();
-  const { user: clerkUser } = useUser();
-  return <AdminLayoutWrapper clerkLogout={clerkLogout} clerkUser={clerkUser} />;
-}
-
-function AdminLayoutMock() {
-  return <AdminLayoutWrapper clerkLogout={null} clerkUser={null} />;
-}
-
 export default function AdminLayout() {
-  if (isClerkEnabled) {
-    return <AdminLayoutClerk />;
-  }
-  return <AdminLayoutMock />;
+  return <AdminLayoutWrapper clerkLogout={null} clerkUser={null} />;
 }

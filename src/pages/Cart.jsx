@@ -112,10 +112,11 @@ export default function Cart() {
     setIsPlacingOrder(true);
 
     try {
-      // Call the backend to create a real DB order
-      const clerkId = user?.clerkId || user?.id;
-      const headers = { 'Content-Type': 'application/json' };
-      if (clerkId) headers['x-clerk-id'] = clerkId;
+      const authToken = localStorage.getItem('stb_token');
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+      };
 
       const payload = {
         userEmail: user?.email || email,

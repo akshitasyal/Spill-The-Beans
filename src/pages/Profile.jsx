@@ -166,11 +166,10 @@ export default function Profile() {
       let apiOrders = [];
       try {
         const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
-        const clerkId = user.clerkId || user.id;
+        const authToken = localStorage.getItem('stb_token');
         const res = await fetch(`${API_BASE}/api/orders`, {
           headers: {
-            'x-clerk-id': clerkId,
-            'x-user-email': user.email || '',
+            ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
           },
         });
         const data = await res.json();

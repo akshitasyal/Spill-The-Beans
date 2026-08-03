@@ -1,15 +1,12 @@
 import { useState } from 'react';
 import { X, Lock, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { SignIn, SignUp } from '@clerk/clerk-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import './AuthModal.css';
 
-const IS_CLERK_ACTIVE = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
-
 export default function AuthModal({ isOpen, onClose, message, redirectUrl, onAuthSuccess }) {
-  const { login } = useAuth();
+  const { login, register } = useAuth();
   const { mergeCartWithBackend } = useCart();
   const navigate = useNavigate();
 
@@ -27,21 +24,19 @@ export default function AuthModal({ isOpen, onClose, message, redirectUrl, onAut
     setError('');
 
     if (!email.trim() || !password) {
-      setError('Please fill in all fields');
+      setError('Please fill in all required fields');
       return;
     }
 
     setLoading(true);
     try {
-      // Simulate/Trigger login
-      const userData = {
-        id: `usr_${Date.now()}`,
-        clerkId: `clerk_${Date.now()}`,
-        email: email.trim(),
-        name: name.trim() || email.split('@')[0],
-      };
+      let userData;
+      if (tab === 'signup') {
+        userData = await register({ email: email.trim(), password, name: name.trim() });
+      } else {
+        userData = await login(email.trim(), password);
+      }
 
-      await login(userData);
       // Merge guest cart items into the authenticated user's cart
       await mergeCartWithBackend(userData);
 
@@ -85,87 +80,76 @@ export default function AuthModal({ isOpen, onClose, message, redirectUrl, onAut
         </div>
 
         <div className="auth-modal-body">
-          {IS_CLERK_ACTIVE ? (
-            <div className="auth-modal-clerk-container">
-              {tab === 'login' ? (
-                <SignIn routing="virtual" fallbackRedirectUrl={redirectUrl || '/'} />
-              ) : (
-                <SignUp routing="virtual" fallbackRedirectUrl={redirectUrl || '/'} />
-              )}
-            </div>
-          ) : (
-            <>
-              <div className="auth-modal-tabs">
-                <button
-                  className={`auth-modal-tab ${tab === 'login' ? 'active' : ''}`}
-                  onClick={() => setTab('login')}
-                >
-                  Sign In
-                </button>
-                <button
-                  className={`auth-modal-tab ${tab === 'signup' ? 'active' : ''}`}
-                  onClick={() => setTab('signup')}
-                >
-                  Create Account
-                </button>
+          <div className="auth-modal-tabs">
+            <button
+              className={`auth-modal-tab ${tab === 'login' ? 'active' : ''}`}
+              onClick={() => setTab('login')}
+            >
+              Sign In
+            </button>
+            <button
+              className={`auth-modal-tab ${tab === 'signup' ? 'active' : ''}`}
+              onClick={() => setTab('signup')}
+            >
+              Create Account
+            </button>
+          </div>
+
+          <form className="auth-modal-form" onSubmit={handleCustomSubmit}>
+            {error && (
+              <div style={{ padding: '0.6rem 0.8rem', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: '8px', color: '#FCA5A5', fontSize: '0.85rem' }}>
+                {error}
               </div>
+            )}
 
-              <form className="auth-modal-form" onSubmit={handleCustomSubmit}>
-                {error && (
-                  <div style={{ padding: '0.6rem 0.8rem', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: '8px', color: '#FCA5A5', fontSize: '0.85rem' }}>
-                    {error}
-                  </div>
-                )}
+            {tab === 'signup' && (
+              <div className="auth-input-group">
+                <label>Full Name</label>
+                <input
+                  type="text"
+                  placeholder="John Doe"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+              </div>
+            )}
 
-                {tab === 'signup' && (
-                  <div className="auth-input-group">
-                    <label>Full Name</label>
-                    <input
-                      type="text"
-                      placeholder="John Doe"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                    />
-                  </div>
-                )}
+            <div className="auth-input-group">
+              <label>Email Address</label>
+              <input
+                type="email"
+                placeholder="coffee.lover@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
 
-                <div className="auth-input-group">
-                  <label>Email Address</label>
-                  <input
-                    type="email"
-                    placeholder="coffee.lover@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
+            <div className="auth-input-group">
+              <label>Password</label>
+              <input
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
 
-                <div className="auth-input-group">
-                  <label>Password</label>
-                  <input
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <button type="submit" className="auth-submit-btn" disabled={loading}>
-                  {loading ? (
-                    'Processing...'
-                  ) : (
-                    <>
-                      <Sparkles size={16} />
-                      {tab === 'login' ? 'Sign In & Continue' : 'Create Account'}
-                    </>
-                  )}
-                </button>
-              </form>
-            </>
-          )}
+            <button type="submit" className="auth-submit-btn" disabled={loading}>
+              {loading ? (
+                'Processing...'
+              ) : (
+                <>
+                  <Sparkles size={16} />
+                  {tab === 'login' ? 'Sign In & Continue' : 'Create Account'}
+                </>
+              )}
+            </button>
+          </form>
         </div>
       </div>
     </div>
   );
 }
+

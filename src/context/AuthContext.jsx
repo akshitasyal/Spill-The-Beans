@@ -1,26 +1,11 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { useUser, useClerk } from '@clerk/clerk-react';
 
 const AuthContext = createContext(null);
-const IS_CLERK_ACTIVE = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
 export function AuthProvider({ children }) {
-  // Clerk hooks (safely accessed when Clerk is wrapped)
-  let clerkUserObj = null;
-  let clerkSignOut = null;
-  
-  try {
-    if (IS_CLERK_ACTIVE) {
-      const clerkUser = useUser();
-      const clerk = useClerk();
-      clerkUserObj = clerkUser?.user;
-      clerkSignOut = clerk?.signOut;
-    }
-  } catch (err) {
-    console.warn('Clerk context not found, fallback to standard auth context.', err);
-  }
-
-  const [localUser, setLocalUser] = useState(() => {
+  const [token, setToken] = useState(() => localStorage.getItem('stb_token') || null);
+  const [user, setUser] = useState(() => {
     try {
       const stored = localStorage.getItem('stb_user');
       return stored ? JSON.parse(stored) : null;
@@ -29,6 +14,8 @@ export function AuthProvider({ children }) {
     }
   });
 
+  const [loading, setLoading] = useState(false);
+
   const [authModal, setAuthModal] = useState({
     isOpen: false,
     message: '',
@@ -36,30 +23,125 @@ export function AuthProvider({ children }) {
     onAuthSuccess: null,
   });
 
-  // Effective active user
-  const effectiveUser = clerkUserObj
-    ? {
-        id: clerkUserObj.id,
-        clerkId: clerkUserObj.id,
-        email: clerkUserObj.primaryEmailAddress?.emailAddress || '',
-        name: clerkUserObj.fullName || clerkUserObj.firstName || 'Coffee Enthusiast',
-        role: clerkUserObj.publicMetadata?.role || 'CUSTOMER',
+  // Verify JWT token & hydrate current user on mount / token change
+  useEffect(() => {
+    async function verifySession() {
+      const currentToken = localStorage.getItem('stb_token');
+      if (!currentToken) {
+        setUser(null);
+        return;
       }
-    : localUser;
 
-  const login = useCallback((userData) => {
-    const u = { ...userData, loginAt: Date.now() };
-    localStorage.setItem('stb_user', JSON.stringify(u));
-    setLocalUser(u);
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/me`, {
+          headers: { Authorization: `Bearer ${currentToken}` },
+        });
+        const data = await res.json();
+        if (data.success && data.user) {
+          setUser(data.user);
+          localStorage.setItem('stb_user', JSON.stringify(data.user));
+        } else {
+          // Token expired or invalid
+          localStorage.removeItem('stb_token');
+          localStorage.removeItem('stb_user');
+          setToken(null);
+          setUser(null);
+        }
+      } catch (err) {
+        console.warn('Failed to verify user session:', err);
+      }
+    }
+
+    verifySession();
   }, []);
 
-  const logout = useCallback(async () => {
-    if (clerkSignOut) {
-      try { await clerkSignOut(); } catch (e) { console.error(e); }
+  // Login handler — accepts (email, password) OR ({ email, password })
+  const login = useCallback(async (emailOrObj, passwordArg) => {
+    let email, password;
+    if (typeof emailOrObj === 'object' && emailOrObj !== null) {
+      email = emailOrObj.email;
+      password = emailOrObj.password;
+    } else {
+      email = emailOrObj;
+      password = passwordArg;
     }
+
+    // If only email is provided (e.g. mock login), simulate or attempt default password
+    if (!password) password = 'password123';
+
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Login failed. Please check your credentials.');
+      }
+
+      const authToken = data.token;
+      const authUser = data.user;
+
+      localStorage.setItem('stb_token', authToken);
+      localStorage.setItem('stb_user', JSON.stringify(authUser));
+      setToken(authToken);
+      setUser(authUser);
+
+      return authUser;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Register / Signup handler
+  const register = useCallback(async (userData) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Registration failed. Please try again.');
+      }
+
+      const authToken = data.token;
+      const authUser = data.user;
+
+      localStorage.setItem('stb_token', authToken);
+      localStorage.setItem('stb_user', JSON.stringify(authUser));
+      setToken(authToken);
+      setUser(authUser);
+
+      return authUser;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Logout handler
+  const logout = useCallback(async () => {
+    try {
+      const currentToken = localStorage.getItem('stb_token');
+      if (currentToken) {
+        await fetch(`${API_BASE}/api/auth/logout`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${currentToken}` },
+        });
+      }
+    } catch (_) {}
+
+    localStorage.removeItem('stb_token');
     localStorage.removeItem('stb_user');
-    setLocalUser(null);
-  }, [clerkSignOut]);
+    setToken(null);
+    setUser(null);
+  }, []);
 
   const openAuthModal = useCallback(({ message = '', redirectUrl = null, onAuthSuccess = null } = {}) => {
     setAuthModal({
@@ -82,9 +164,12 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider
       value={{
-        user: effectiveUser,
-        isLoggedIn: !!effectiveUser,
+        user,
+        token,
+        isLoggedIn: !!user,
+        loading,
         login,
+        register,
         logout,
         authModal,
         openAuthModal,
@@ -101,3 +186,4 @@ export function useAuth() {
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
 }
+

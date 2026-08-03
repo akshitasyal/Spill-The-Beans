@@ -12,9 +12,11 @@ export const WishlistProvider = ({ children }) => {
   const fetchWishlist = useCallback(async () => {
     if (!user) return;
     try {
-      const clerkId = user.clerkId || user.id;
+      const authToken = localStorage.getItem('stb_token');
       const res = await fetch(`${API_BASE}/api/wishlist`, {
-        headers: { 'x-clerk-id': clerkId },
+        headers: {
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        },
       });
       const data = await res.json();
       if (data.success && Array.isArray(data.data)) {
@@ -52,12 +54,12 @@ export const WishlistProvider = ({ children }) => {
     );
 
     try {
-      const clerkId = user.clerkId || user.id;
+      const authToken = localStorage.getItem('stb_token');
       const res = await fetch(`${API_BASE}/api/wishlist/toggle`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-clerk-id': clerkId,
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
         },
         body: JSON.stringify({ productId }),
       });

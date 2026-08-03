@@ -73,8 +73,8 @@ export default function Checkout() {
     setError('');
 
     try {
-      const clerkId = user.clerkId || user.id;
       const payload = {
+
         userEmail: user.email,
         name,
         phone,
@@ -94,11 +94,12 @@ export default function Checkout() {
         })),
       };
 
+      const authToken = localStorage.getItem('stb_token');
       const res = await fetch(`${API_BASE}/api/orders/checkout-direct`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-clerk-id': clerkId,
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
         },
         body: JSON.stringify(payload),
       });

@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useUser, useClerk } from '@clerk/clerk-react';
 import { SectionHeader } from './AdminLayout';
-import { User, Lock, Shield, Camera, Save, ExternalLink } from 'lucide-react';
+import { User, Lock, Shield, Camera, Save } from 'lucide-react';
 
-const isClerkEnabled = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+const isClerkEnabled = false;
 
 // Mock admin profile for non-Clerk environments
 const MOCK_PROFILE = {
@@ -218,21 +217,8 @@ export function ProfilePageContent({ user, openUserProfile }) {
   );
 }
 
-function ProfilePageClerk() {
-  const { user } = useUser();
-  const { openUserProfile } = useClerk();
-  return <ProfilePageContent user={user} openUserProfile={openUserProfile} />;
-}
-
-function ProfilePageMock() {
-  return <ProfilePageContent user={null} openUserProfile={null} />;
-}
-
 export default function ProfilePage() {
-  if (isClerkEnabled) {
-    return <ProfilePageClerk />;
-  }
-  return <ProfilePageMock />;
+  return <ProfilePageContent user={null} openUserProfile={null} />;
 }
 
 function FormField({ label, value, onChange, type = 'text', placeholder, disabled, hint }) {

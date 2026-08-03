@@ -135,22 +135,32 @@ function LoginForm({ onSuccess }) {
   const set = (field) => (e) =>
     setForm(f => ({ ...f, [field]: field === 'remember' ? e.target.checked : e.target.value }));
 
+  const [apiError, setApiError] = useState('');
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setApiError('');
     const errs = validateLogin(form);
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setErrors({});
     setLoading(true);
-    // Simulate API call
-    await new Promise(r => setTimeout(r, 1400));
-    const authUser = { email: form.email, name: form.email.split('@')[0] };
-    login(authUser);
-    setLoading(false);
-    onSuccess('login', authUser);
+    try {
+      const authUser = await login(form.email, form.password);
+      onSuccess('login', authUser);
+    } catch (err) {
+      setApiError(err.message || 'Login failed.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <form className="auth-form" onSubmit={handleSubmit} noValidate>
+      {apiError && (
+        <div style={{ padding: '0.6rem 0.8rem', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: '8px', color: '#FCA5A5', fontSize: '0.85rem', marginBottom: '1rem' }}>
+          {apiError}
+        </div>
+      )}
       {/* Email */}
       <div className="auth-field">
         <label className="auth-label" htmlFor="login-email">Email address</label>
@@ -222,25 +232,41 @@ function SignupForm({ onSuccess }) {
   const [showPass, setShowPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const [apiError, setApiError] = useState('');
+  const { register } = useAuth();
 
   const set = (field) => (e) => setForm(f => ({ ...f, [field]: e.target.value }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setApiError('');
     const errs = validateSignup(form);
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setErrors({});
     setLoading(true);
-    await new Promise(r => setTimeout(r, 1600));
-    const authUser = { email: form.email, name: `${form.firstName} ${form.lastName}` };
-    login(authUser);
-    setLoading(false);
-    onSuccess('signup', authUser);
+    try {
+      const authUser = await register({
+        email: form.email,
+        password: form.password,
+        firstName: form.firstName,
+        lastName: form.lastName,
+        phone: form.phone,
+      });
+      onSuccess('signup', authUser);
+    } catch (err) {
+      setApiError(err.message || 'Registration failed.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <form className="auth-form" onSubmit={handleSubmit} noValidate>
+      {apiError && (
+        <div style={{ padding: '0.6rem 0.8rem', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: '8px', color: '#FCA5A5', fontSize: '0.85rem', marginBottom: '1rem' }}>
+          {apiError}
+        </div>
+      )}
       {/* First/Last row */}
       <div className="auth-field-row">
         <div className="auth-field">

@@ -82,7 +82,7 @@ function formatDbCartItem(dbItem) {
 }
 
 export const CartProvider = ({ children }) => {
-  const { user, isLoggedIn } = useAuth();
+  const { user, token, isLoggedIn } = useAuth();
 
   const [state, dispatch] = useReducer(cartReducer, initialState, (init) => {
     try {
@@ -109,13 +109,12 @@ export const CartProvider = ({ children }) => {
       const savedLsCart = localStorage.getItem('spill_the_beans_cart');
       const lsItems = savedLsCart ? JSON.parse(savedLsCart) : [];
 
-      const clerkId = activeUser.clerkId || activeUser.id;
+      const authToken = token || localStorage.getItem('stb_token');
       const res = await fetch(`${API_BASE}/api/cart/merge`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-clerk-id': clerkId,
-          'x-user-email': activeUser.email || '',
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
         },
         body: JSON.stringify({ items: lsItems }),
       });
@@ -136,11 +135,10 @@ export const CartProvider = ({ children }) => {
   const fetchDbCart = useCallback(async () => {
     if (!user) return;
     try {
-      const clerkId = user.clerkId || user.id;
+      const authToken = token || localStorage.getItem('stb_token');
       const res = await fetch(`${API_BASE}/api/cart`, {
         headers: {
-          'x-clerk-id': clerkId,
-          'x-user-email': user.email || '',
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
         },
       });
       const data = await res.json();
@@ -173,12 +171,12 @@ export const CartProvider = ({ children }) => {
 
     if (isLoggedIn && user) {
       try {
-        const clerkId = user.clerkId || user.id;
+        const authToken = token || localStorage.getItem('stb_token');
         await fetch(`${API_BASE}/api/cart/items`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-clerk-id': clerkId,
+            ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
           },
           body: JSON.stringify({
             productId: product.id || product.productId,
@@ -198,10 +196,12 @@ export const CartProvider = ({ children }) => {
 
     if (isLoggedIn && user) {
       try {
-        const clerkId = user.clerkId || user.id;
+        const authToken = token || localStorage.getItem('stb_token');
         await fetch(`${API_BASE}/api/cart/items/${id}`, {
           method: 'DELETE',
-          headers: { 'x-clerk-id': clerkId },
+          headers: {
+            ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+          },
         });
       } catch (err) {
         console.error('Failed to sync remove item to server:', err);
@@ -215,12 +215,12 @@ export const CartProvider = ({ children }) => {
 
     if (isLoggedIn && user) {
       try {
-        const clerkId = user.clerkId || user.id;
+        const authToken = token || localStorage.getItem('stb_token');
         await fetch(`${API_BASE}/api/cart/items/${id}`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
-            'x-clerk-id': clerkId,
+            ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
           },
           body: JSON.stringify({ quantity }),
         });
@@ -237,10 +237,12 @@ export const CartProvider = ({ children }) => {
 
     if (isLoggedIn && user) {
       try {
-        const clerkId = user.clerkId || user.id;
+        const authToken = token || localStorage.getItem('stb_token');
         await fetch(`${API_BASE}/api/cart`, {
           method: 'DELETE',
-          headers: { 'x-clerk-id': clerkId },
+          headers: {
+            ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+          },
         });
       } catch (err) {
         console.error('Failed to clear cart on server:', err);
