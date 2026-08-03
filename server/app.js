@@ -12,6 +12,7 @@ import logger from './middleware/logger.js';
 import { auditLogger } from './middleware/auditLog.js';
 
 // Route imports
+import authRoutes    from './routes/auth.js';
 import userRoutes     from './routes/users.js';
 import productRoutes  from './routes/products.js';
 import categoryRoutes from './routes/categories.js';
@@ -31,9 +32,9 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://*.clerk.accounts.dev", "https://clerk.spillthebeans.in"],
-      connectSrc: ["'self'", "https://*.clerk.accounts.dev", "https://clerk.spillthebeans.in", "https://api.stripe.com", "https://api.razorpay.com"],
-      imgSrc: ["'self'", "data:", "https://images.unsplash.com", "https://img.clerk.com", "https://res.cloudinary.com"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      connectSrc: ["'self'", "https://api.stripe.com", "https://api.razorpay.com"],
+      imgSrc: ["'self'", "data:", "https://images.unsplash.com", "https://res.cloudinary.com"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       frameAncestors: ["'none'"],
@@ -80,7 +81,7 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-clerk-id', 'X-Requested-With', 'Accept'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token', 'X-Requested-With', 'Accept'],
 }));
 
 app.use(express.json({ limit: '10mb' }));
@@ -101,8 +102,8 @@ app.use(morgan(morganFormat, {
 // RATE LIMITING
 // ─────────────────────────────────────────────────────────────
 app.use('/api/', generalLimiter);
-app.use('/api/users/login', authLimiter);
-app.use('/api/users/register', authLimiter);
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
 app.use('/api/orders/checkout', paymentLimiter);
 app.use('/api/orders/verify', paymentLimiter);
 
@@ -126,6 +127,7 @@ app.get('/health', (req, res) => {
 // ─────────────────────────────────────────────────────────────
 // API ROUTES (Non-Admin routes)
 // ─────────────────────────────────────────────────────────────
+app.use('/api/auth',       authRoutes);
 app.use('/api/users',      userRoutes);
 app.use('/api/products',   productRoutes);
 app.use('/api/categories', categoryRoutes);

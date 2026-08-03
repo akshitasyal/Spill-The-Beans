@@ -1,49 +1,63 @@
 // ============================================================
 //  auth.js — Authentication & Authorization Middleware
 // ============================================================
+import jwt from 'jsonwebtoken';
 import { UserRepository } from '../repositories/UserRepository.js';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'spill_the_beans_jwt_secret_key_2026_super_secure';
 
 /**
  * requireAuth middleware
- * Verifies user authentication via Clerk token or x-clerk-id header.
- * Ensures a user record exists in the PostgreSQL database.
- * Attaches req.user and req.clerkId.
+ * Verifies JWT token from Authorization header (`Bearer <token>`) or `x-auth-token`.
+ * Attaches req.user to request.
+ * Returns 401 Unauthorized for missing, invalid, or expired tokens.
  */
 export async function requireAuth(req, res, next) {
   try {
-    let clerkId = req.headers['x-clerk-id'];
-    let userEmail = req.headers['x-user-email'];
+    let token = null;
 
-    // Also check Authorization header if token is passed (Bearer <clerkId_or_token>)
     const authHeader = req.headers.authorization;
-    if (!clerkId && authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.split(' ')[1];
-      if (token && !token.includes('.')) {
-        clerkId = token;
-      }
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.split(' ')[1];
+    } else if (req.headers['x-auth-token']) {
+      token = req.headers['x-auth-token'];
     }
 
-    if (!clerkId) {
+    if (!token) {
       return res.status(401).json({
         success: false,
         message: 'Authentication required. Please sign in to perform this action.',
       });
     }
 
-    // Lookup user in PostgreSQL database
-    let user = await UserRepository.findByClerkId(clerkId);
-
-    // If user record doesn't exist yet, auto-provision user in database
-    if (!user) {
-      const email = userEmail || `${clerkId}@user.clerk.dev`;
-      user = await UserRepository.upsertByClerkId({
-        clerkId,
-        email,
-        name: email.split('@')[0],
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (err) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired authentication token. Please sign in again.',
       });
     }
 
-    req.clerkId = clerkId;
+    const userId = decoded.userId || decoded.id;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid token payload.',
+      });
+    }
+
+    const user = await UserRepository.findById(userId);
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'User account no longer exists.',
+      });
+    }
+
+    // Omit sensitive data before attaching to request
+    delete user.password;
     req.user = user;
     next();
   } catch (err) {
@@ -53,7 +67,7 @@ export async function requireAuth(req, res, next) {
 
 /**
  * requireAdmin middleware
- * Ensures the authenticated user has ADMIN role in PostgreSQL or Clerk metadata.
+ * Ensures the authenticated user has ADMIN role.
  * Must be placed after requireAuth.
  */
 export function requireAdmin(req, res, next) {
@@ -64,9 +78,7 @@ export function requireAdmin(req, res, next) {
     });
   }
 
-  const isDbAdmin = req.user.role === 'ADMIN';
-
-  if (!isDbAdmin) {
+  if (req.user.role !== 'ADMIN') {
     return res.status(403).json({
       success: false,
       message: 'Forbidden. Access restricted to administrator accounts.',
@@ -75,3 +87,4 @@ export function requireAdmin(req, res, next) {
 
   next();
 }
+

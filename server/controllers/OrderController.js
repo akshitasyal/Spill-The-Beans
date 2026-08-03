@@ -20,10 +20,8 @@ export const OrderController = {
    */
   async placeOrder(req, res, next) {
     try {
-      const clerkId = req.headers['x-clerk-id'];
-      if (!clerkId) return res.status(401).json({ success: false, message: 'Unauthorized.' });
-
-      const userId = await resolveUserId(clerkId);
+      if (!req.user) return res.status(401).json({ success: false, message: 'Authentication required.' });
+      const userId = req.user.id;
       const { addressId, paymentMethod, couponCode, notes } = req.body;
 
       // 1. Get cart
@@ -210,36 +208,14 @@ export const OrderController = {
    */
   async checkoutDirect(req, res, next) {
     try {
-      const clerkId = req.headers['x-clerk-id'];
-
-      // ── Authentication guard ──────────────────────────────────────────
-      // This endpoint must NEVER allow unauthenticated order creation.
-      // Even if the frontend is compromised, the backend enforces auth here.
-      if (!clerkId) {
+      if (!req.user) {
         return res.status(401).json({
           success: false,
           message: 'Authentication required. Please sign in to place an order.',
         });
       }
 
-      const { userEmail, name } = req.body;
-      let userId;
-
-      // Resolve or auto-provision the authenticated user record in DB
-      let user = await UserRepository.findByClerkId(clerkId);
-      if (!user) {
-        const userEmailFinal = userEmail || `${clerkId}@clerk.user`;
-        user = await prisma.user.upsert({
-          where: { clerkId },
-          update: { email: userEmailFinal },
-          create: {
-            clerkId,
-            email: userEmailFinal,
-            name: name || userEmailFinal.split('@')[0] || 'Coffee Lover',
-          },
-        });
-      }
-      userId = user.id;
+      const userId = req.user.id;
 
       const {
         // Address fields

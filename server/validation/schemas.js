@@ -25,11 +25,13 @@ const paginationSchema = z.object({
 // USER
 // ─────────────────────────────────────────────────────────────
 export const createUserSchema = z.object({
-  clerkId: z.string().min(1),
+  clerkId: z.string().optional(),
   email: z.string().email(),
+  password: z.string().min(6).optional(),
   name: z.string().trim().min(2).max(100).optional(),
   phone: phoneSchema.optional(),
 });
+
 
 export const updateUserSchema = z.object({
   name: z.string().trim().min(2).max(100).optional(),

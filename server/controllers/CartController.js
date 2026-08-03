@@ -5,16 +5,13 @@ import { CartRepository } from '../repositories/CartRepository.js';
 import { UserRepository } from '../repositories/UserRepository.js';
 
 /**
- * Helper: resolve userId from req.user or header
+ * Helper: resolve userId from req.user
  */
-async function getUserIdFromReq(req) {
+function getUserIdFromReq(req) {
   if (req.user?.id) return req.user.id;
-  const clerkId = req.headers['x-clerk-id'];
-  if (!clerkId) throw Object.assign(new Error('Unauthorized.'), { status: 401 });
-  const user = await UserRepository.findByClerkId(clerkId);
-  if (!user) throw Object.assign(new Error('User not found.'), { status: 404 });
-  return user.id;
+  throw Object.assign(new Error('Unauthorized. Please sign in.'), { status: 401 });
 }
+
 
 export const CartController = {
   /**

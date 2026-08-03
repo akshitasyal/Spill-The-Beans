@@ -14,12 +14,8 @@ export const CouponController = {
       const { code, subtotal } = req.body;
 
       // Get userId if authenticated
-      let userId = null;
-      const clerkId = req.headers['x-clerk-id'];
-      if (clerkId) {
-        const user = await UserRepository.findByClerkId(clerkId);
-        if (user) userId = user.id;
-      }
+      const userId = req.user?.id || null;
+
 
       const result = await CouponRepository.validateCoupon(code, subtotal, userId);
 

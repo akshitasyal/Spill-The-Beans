@@ -14,7 +14,8 @@ export const auditLogger = (actionName) => {
       res.send = originalSend; // restore original send
 
       const statusCode = res.statusCode;
-      const adminId = req.headers['x-clerk-id'] || 'anonymous-admin';
+      const adminId = req.user?.id || req.user?.email || 'system-admin';
+
       const ip = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
       // Log only state-changing actions

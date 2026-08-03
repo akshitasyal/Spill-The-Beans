@@ -15,9 +15,21 @@ export const UserRepository = {
   },
 
   /**
-   * Find a user by their Clerk ID (for auth sync)
+   * Find a user by email address
+   */
+  async findByEmail(email) {
+    if (!email) return null;
+    return prisma.user.findUnique({
+      where: { email: email.toLowerCase().trim() },
+      include: { addresses: true },
+    });
+  },
+
+  /**
+   * Find a user by their Clerk ID (legacy fallback)
    */
   async findByClerkId(clerkId) {
+    if (!clerkId) return null;
     return prisma.user.findUnique({
       where: { clerkId },
       include: { addresses: true },
@@ -25,22 +37,17 @@ export const UserRepository = {
   },
 
   /**
-   * Create a new user (called on first Clerk webhook)
+   * Create a new user with hashed password
    */
-  async createUser({ clerkId, email, name, phone, role = 'CUSTOMER' }) {
+  async createUser({ email, password, name, phone, role = 'CUSTOMER' }) {
     return prisma.user.create({
-      data: { clerkId, email, name, phone, role },
-    });
-  },
-
-  /**
-   * Upsert user — create or update on Clerk sync
-   */
-  async upsertByClerkId({ clerkId, email, name, phone }) {
-    return prisma.user.upsert({
-      where: { clerkId },
-      update: { email, name, phone },
-      create: { clerkId, email, name, phone },
+      data: {
+        email: email.toLowerCase().trim(),
+        password,
+        name,
+        phone,
+        role,
+      },
     });
   },
 
