@@ -6,7 +6,7 @@ A modern full-stack coffee e-commerce platform built with **Next.js**, offering 
 
 ## 🚀 Live Demo
 
-> **Website:** https://your-live-demo-link.vercel.app
+> **Website:** [https://your-live-demo-link.vercel.app](https://spill-the-beans-mu.vercel.app/)
 
 ---
 
