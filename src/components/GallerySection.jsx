@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { staggerFast, slideUp, viewportOnce } from '../lib/animations';
-const galleryImg1 = '/gallery-coffee-1.png';
+const galleryImg1 = 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=600&q=80';
 import './GallerySection.css';
 
 const InstagramIcon = ({ size = 18, className, style, ...props }) => (

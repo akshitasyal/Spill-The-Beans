@@ -295,7 +295,7 @@ export default function BlogsPage() {
                 <label style={labelStyle}>Featured Image URL</label>
                 <input
                   type="text"
-                  placeholder="/assets/french_press.png"
+                  placeholder="/assets/accessory_milk_frother.png"
                   style={inputStyle}
                   value={form.image}
                   onChange={set('image')}

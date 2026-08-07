@@ -1,4 +1,4 @@
-import { ProductFilters, ProductDTO, CategoryDTO, ProductSearchResult } from '../types/product';
+import { ProductFilters, ProductDTO, CategoryDTO, ProductSearchResult, ProductVariantDTO } from '../types/product';
 
 const API_BASE_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api`;
 
@@ -32,6 +32,7 @@ export const getProductBySlug = async (slug: string): Promise<{
   success: boolean;
   data: {
     product: ProductDTO;
+    variants: ProductVariantDTO[];
     category: CategoryDTO;
     reviewSummary: {
       averageRating: number;

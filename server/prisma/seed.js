@@ -55,7 +55,7 @@ const products = [
     "price": 59400,
     "salePrice": 63479,
     "images": [
-      "/assets/mocha-pe-chauka-50g.png"
+      "/assets/product_mocha_50g.png"
     ],
     "stock": 100,
     "weight": "50g",
@@ -87,7 +87,7 @@ const products = [
     "price": 58679,
     "salePrice": 63479,
     "images": [
-      "/assets/raat-ki-rani-espresso-50g.png"
+      "/assets/product_espresso_50g.png"
     ],
     "stock": 100,
     "weight": "50g",
@@ -119,7 +119,7 @@ const products = [
     "price": 59879,
     "salePrice": 63479,
     "images": [
-      "/assets/masti-bhari-strawberry-50g.png"
+      "/assets/product_strawberry_50g.png"
     ],
     "stock": 100,
     "weight": "50g",
@@ -151,7 +151,7 @@ const products = [
     "price": 59879,
     "salePrice": 63479,
     "images": [
-      "/assets/nawabi-pistachio-50g.png"
+      "/assets/product_pistachio_50g.png"
     ],
     "stock": 100,
     "weight": "50g",
@@ -183,7 +183,7 @@ const products = [
     "price": 58679,
     "salePrice": 63479,
     "images": [
-      "/assets/pyaarbhari-chocolate-raspberry-50g.png"
+      "/assets/product_choco_raspberry_50g.png"
     ],
     "stock": 100,
     "weight": "50g",
@@ -215,7 +215,7 @@ const products = [
     "price": 59400,
     "salePrice": 63479,
     "images": [
-      "/assets/vichaar-over-vanilla-50g.png"
+      "/assets/product_vanilla_50g.png"
     ],
     "stock": 100,
     "weight": "50g",
@@ -247,7 +247,7 @@ const products = [
     "price": 51000,
     "salePrice": 63479,
     "images": [
-      "/assets/caramel-ka-kamal-50g.png"
+      "/assets/product_caramel_50g.png"
     ],
     "stock": 100,
     "weight": "50g",
@@ -279,7 +279,7 @@ const products = [
     "price": 59400,
     "salePrice": 63479,
     "images": [
-      "/assets/nutkhat-hazelnut-50g.png"
+      "/assets/product_hazelnut_50g.png"
     ],
     "stock": 100,
     "weight": "50g",
@@ -311,7 +311,7 @@ const products = [
     "price": 51000,
     "salePrice": 63479,
     "images": [
-      "/assets/pal-pal-pineapple-50g.png"
+      "/assets/product_pineapple_50g.png"
     ],
     "stock": 100,
     "weight": "50g",
@@ -343,7 +343,7 @@ const products = [
     "price": 51000,
     "salePrice": 63479,
     "images": [
-      "/assets/keep-calm-with-kacha-aam-50g.png"
+      "/assets/product_kacha_aam_50g.png"
     ],
     "stock": 100,
     "weight": "50g",
@@ -375,7 +375,7 @@ const products = [
     "price": 101400,
     "salePrice": 106680,
     "images": [
-      "/assets/mocha-pe-chauka-100g.png"
+      "/assets/product_mocha_100g.png"
     ],
     "stock": 100,
     "weight": "100g",
@@ -407,7 +407,7 @@ const products = [
     "price": 100680,
     "salePrice": 106680,
     "images": [
-      "/assets/raat-ki-rani-espresso-100g.png"
+      "/assets/product_espresso_100g.png"
     ],
     "stock": 100,
     "weight": "100g",
@@ -439,7 +439,7 @@ const products = [
     "price": 101400,
     "salePrice": 106680,
     "images": [
-      "/assets/vichaar-over-vanilla-100g.png"
+      "/assets/product_vanilla_100g.png"
     ],
     "stock": 100,
     "weight": "100g",
@@ -471,7 +471,7 @@ const products = [
     "price": 83880,
     "salePrice": 106680,
     "images": [
-      "/assets/caramel-ka-kamal-100g.png"
+      "/assets/product_caramel_100g.png"
     ],
     "stock": 100,
     "weight": "100g",
@@ -503,7 +503,7 @@ const products = [
     "price": 101400,
     "salePrice": 106680,
     "images": [
-      "/assets/nutkhat-hazelnut-100g.png"
+      "/assets/product_hazelnut_100g.png"
     ],
     "stock": 100,
     "weight": "100g",
@@ -535,7 +535,7 @@ const products = [
     "price": 99900,
     "salePrice": 119900,
     "images": [
-      "/assets/vichaar-over-vanilla-mocha-pe-chauka-combo.png"
+      "/assets/combo_vanilla_mocha.png"
     ],
     "stock": 100,
     "weight": "2 x 50g",
@@ -567,7 +567,7 @@ const products = [
     "price": 99900,
     "salePrice": 119900,
     "images": [
-      "/assets/nutkhat-hazelnut-mocha-pe-chauka-combo.png"
+      "/assets/combo_hazelnut_mocha.png"
     ],
     "stock": 100,
     "weight": "2 x 50g",
@@ -599,7 +599,7 @@ const products = [
     "price": 99900,
     "salePrice": 119900,
     "images": [
-      "/assets/mocha-pe-chauka-raat-ki-rani-espresso-combo.png"
+      "/assets/combo_espresso_mocha.png"
     ],
     "stock": 100,
     "weight": "2 x 50g",
@@ -631,7 +631,7 @@ const products = [
     "price": 99900,
     "salePrice": 119900,
     "images": [
-      "/assets/vichaar-over-vanilla-pyaarbhari-chocolate-raspberry-combo.png"
+      "/assets/combo_vanilla_raspberry.png"
     ],
     "stock": 100,
     "weight": "2 x 50g",
@@ -663,7 +663,7 @@ const products = [
     "price": 149900,
     "salePrice": 189900,
     "images": [
-      "/assets/raat-ki-rani-mocha-choco-raspberry-triple.png"
+      "/assets/comboEspressoMochaChocoRaspberry.png"
     ],
     "stock": 100,
     "weight": "3 x 50g",
@@ -697,7 +697,7 @@ const products = [
     "price": 159900,
     "salePrice": 204900,
     "images": [
-      "/assets/strawberry-vanilla-mocha-triple.png"
+      "/assets/bundle_strawberry_vanilla_mocha_trio.png"
     ],
     "stock": 100,
     "weight": "50g",
@@ -729,7 +729,7 @@ const products = [
     "price": 79900,
     "salePrice": 99800,
     "images": [
-      "/assets/espresso-froth-set.png"
+      "/assets/combo_frother_espresso.jpg"
     ],
     "stock": 100,
     "weight": "50g Jar + Frother",
@@ -762,7 +762,7 @@ const products = [
     "price": 89900,
     "salePrice": 144800,
     "images": [
-      "/assets/hustle-mode-on-combo.png"
+      "/assets/combo_hustle_mode_frother_bestsellers.jpg"
     ],
     "stock": 100,
     "weight": "10 Sachets + Frother",
@@ -797,7 +797,7 @@ const products = [
     "price": 229900,
     "salePrice": 366900,
     "images": [
-      "/assets/hustlers-assembly-combo-assorted-30-pack-hazelnut-caramel.png"
+      "/assets/combo_assorted_box_hazelnut_caramel.jpg"
     ],
     "stock": 100,
     "weight": "30 Sachets + 2 x 50g Jars",
@@ -834,7 +834,7 @@ const products = [
     "price": 179900,
     "salePrice": 239900,
     "images": [
-      "/assets/assorted-30-pack.png"
+      "/assets/stb_assorted_box.png"
     ],
     "stock": 100,
     "weight": "30 Sachets",
@@ -871,7 +871,7 @@ const products = [
     "price": 69900,
     "salePrice": 94900,
     "images": [
-      "/assets/bestsellers-10-pack.png"
+      "/assets/stb_bestsellers_box.png"
     ],
     "stock": 100,
     "weight": "10 Sachets",
@@ -905,7 +905,7 @@ const products = [
     "price": 29900,
     "salePrice": 39900,
     "images": [
-      "/assets/iced-tea-guava-chilli.png"
+      "/assets/iced_tea_guava_chilli.jpg"
     ],
     "stock": 100,
     "weight": "50g",
@@ -937,7 +937,7 @@ const products = [
     "price": 29900,
     "salePrice": 39900,
     "images": [
-      "/assets/iced-tea-strawberry.png"
+      "/assets/iced_tea_strawberry.jpg"
     ],
     "stock": 100,
     "weight": "50g",
@@ -969,7 +969,7 @@ const products = [
     "price": 79900,
     "salePrice": 99900,
     "images": [
-      "/assets/iced-tea-assorted-5-flavours.png"
+      "/assets/iced_tea_assorted.jpg"
     ],
     "stock": 100,
     "weight": "50g",
@@ -1003,7 +1003,7 @@ const products = [
     "price": 34900,
     "salePrice": 49900,
     "images": [
-      "/assets/milk-frother.png"
+      "/assets/accessory_milk_frother.png"
     ],
     "stock": 100,
     "weight": "50g",
@@ -1033,7 +1033,7 @@ const products = [
     "price": 79900,
     "salePrice": 99900,
     "images": [
-      "/assets/stb-branded-tumbler.png"
+      "/assets/accessory_tumbler.png"
     ],
     "stock": 100,
     "weight": "50g",
@@ -1063,7 +1063,7 @@ const coupons = [
     "code": "BEANS10",
     "type": "PERCENTAGE",
     "value": 10,
-    "minOrderAmount": 50000,
+    "minOrderAmount": 500,
     "maxDiscount": null,
     "usageLimit": null,
     "perUserLimit": 1,
@@ -1073,7 +1073,7 @@ const coupons = [
     "code": "FIRST15",
     "type": "PERCENTAGE",
     "value": 15,
-    "minOrderAmount": 50000,
+    "minOrderAmount": 500,
     "maxDiscount": 30000,
     "usageLimit": null,
     "perUserLimit": 1,
@@ -1083,7 +1083,7 @@ const coupons = [
     "code": "COFFEE20",
     "type": "PERCENTAGE",
     "value": 20,
-    "minOrderAmount": 100000,
+    "minOrderAmount": 1000,
     "maxDiscount": 50000,
     "usageLimit": 500,
     "perUserLimit": 1,

@@ -52,6 +52,9 @@ export const ProductController = {
       // Get Related Products (limit 4)
       const related = await ProductRepository.getRelated(product.id, product.categoryId, 4);
 
+      // Get sibling variants (same baseProduct) — empty array if not a variant product
+      const variants = await ProductRepository.getVariants(product.baseProduct);
+
       // Extract category from product and omit from product response if desired
       const { category, ...productData } = product;
 
@@ -59,6 +62,7 @@ export const ProductController = {
         success: true,
         data: {
           product: productData,
+          variants,
           category,
           reviewSummary: {
             averageRating: avgRating,

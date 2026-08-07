@@ -42,8 +42,8 @@ export const staggerContainer = {
   hidden: {},
   visible: {
     transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.05,
+      staggerChildren: 0,
+      delayChildren: 0,
     },
   },
 };
@@ -52,8 +52,8 @@ export const staggerFast = {
   hidden: {},
   visible: {
     transition: {
-      staggerChildren: 0.06,
-      delayChildren: 0.02,
+      staggerChildren: 0,
+      delayChildren: 0,
     },
   },
 };
@@ -62,41 +62,41 @@ export const hoverScale = {
   rest: { scale: 1 },
   hover: {
     scale: 1.03,
-    transition: { duration: 0.25, ease: 'easeOut' },
+    transition: { duration: 0.15, ease: 'easeOut' },
   },
 };
 
 export const hoverLift = {
   rest: { y: 0, boxShadow: '0 2px 12px rgba(88,19,18,0.08)' },
   hover: {
-    y: -6,
+    y: -4,
     boxShadow: '0 16px 48px rgba(88,19,18,0.16)',
-    transition: { duration: 0.25, ease: 'easeOut' },
+    transition: { duration: 0.15, ease: 'easeOut' },
   },
 };
 
 export const pageTransition = {
-  initial: { opacity: 0, y: 12 },
+  initial: { opacity: 0, y: 4 },
   animate: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] },
+    transition: { duration: 0.15, ease: [0.22, 1, 0.36, 1] },
   },
   exit: {
     opacity: 0,
-    y: -8,
-    transition: { duration: 0.2, ease: 'easeIn' },
+    y: -4,
+    transition: { duration: 0.1, ease: 'easeIn' },
   },
 };
 
 export const scrollReveal = {
-  hidden: { opacity: 0, y: 20 },
+  hidden: { opacity: 0, y: 10 },
   visible: (i = 0) => ({
     opacity: 1,
     y: 0,
     transition: {
-      delay: i * 0.08,
-      duration: 0.4,
+      delay: 0,
+      duration: 0.2,
       ease: [0.22, 1, 0.36, 1],
     },
   }),

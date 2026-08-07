@@ -1,8 +1,8 @@
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { ArrowLeft, ShoppingBag, Heart, Star, Package, Coffee, Zap, Globe, CheckCircle2 } from 'lucide-react';
-import { getProductBySlug, getRelatedProducts } from '../data/products';
+import { getProductBySlug, getRelatedProducts, products as allProducts, CATEGORIES } from '../data/products';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import StarRating from '../components/StarRating';
@@ -30,6 +30,70 @@ export default function ProductDetail() {
 
   const { user, isLoggedIn } = useAuth();
 
+  const currentFlavour = product?.flavour ?? null;
+  const currentSize = product?.weight ?? null;
+
+  // ── Variant selector logic (built from local data) ─────────────────
+  // Only show variants for Flavoured Instant single-serve products
+  const siblings = useMemo(() => {
+    if (!product || product.category !== CATEGORIES.INSTANT) return [];
+    // Group siblings: same category, exclude bundles (weight contains 'x')
+    return allProducts.filter(
+      p => p.category === CATEGORIES.INSTANT &&
+           !p.weight?.toLowerCase().includes('x') &&
+           !p.weight?.toLowerCase().includes('pack')
+    );
+  }, [product]);
+
+  // Flavours filtered by currently selected size — only show flavours that exist for that size
+  const flavours = useMemo(() => {
+    const seen = new Set();
+    const result = [];
+    for (const p of siblings) {
+      if (p.weight === currentSize && p.flavour && !seen.has(p.flavour)) {
+        seen.add(p.flavour);
+        result.push(p.flavour);
+      }
+    }
+    return result;
+  }, [siblings, currentSize]);
+
+  const sizes = useMemo(() => {
+    const seen = new Set();
+    const result = [];
+    for (const p of siblings) {
+      if (p.weight && !seen.has(p.weight)) {
+        seen.add(p.weight);
+        result.push(p.weight);
+      }
+    }
+    return result;
+  }, [siblings]);
+
+  const findSibling = (flavour, size) =>
+    siblings.find(p => p.flavour === flavour && p.weight === size) ?? null;
+
+  const handleFlavourClick = (flavour) => {
+    if (flavour === currentFlavour) return;
+    // Flavours shown are already filtered to currentSize, so target always exists
+    const target = findSibling(flavour, currentSize);
+    if (target) navigate(`/product/${target.slug}`);
+  };
+
+  const handleSizeClick = (size) => {
+    if (size === currentSize) return;
+    // Try to preserve current flavour in the new size
+    let target = findSibling(currentFlavour, size);
+    // Fallback: current flavour not in new size → navigate to first available flavour for that size
+    if (!target) target = siblings.find(p => p.weight === size) ?? null;
+    if (target) navigate(`/product/${target.slug}`);
+  };
+
+  // A size is available if ANY sibling exists for it (so both size buttons are always enabled)
+  const isSizeAvailable = (size) =>
+    siblings.some(p => p.weight === size);
+  // ── End variant selector logic ─────────────────────────────────────
+
   // Submit review states
   const [rating, setRating] = useState(5);
   const [hoverRating, setHoverRating] = useState(0);
@@ -43,10 +107,10 @@ export default function ProductDetail() {
   useEffect(() => {
     if (product) {
       ReviewService.getReviews().then(res => {
-        if (res.success) {
+        if (res && res.success && Array.isArray(res.data)) {
           const productReviews = res.data.filter(
-            r => r.product.name.toLowerCase() === product.name.toLowerCase() &&
-            (r.isApproved || (user && r.user.email === user.email))
+            r => r && r.product?.name?.toLowerCase() === product.name?.toLowerCase() &&
+            (r.isApproved || (user && r.user?.email === user.email))
           );
           if (productReviews.length > 0) {
             setReviewsList(productReviews);
@@ -138,7 +202,7 @@ export default function ProductDetail() {
     );
   }
 
-  const related = getRelatedProducts(product);
+  const related = getRelatedProducts(product, 4);
   const wishlisted = isWishlisted(product.id);
   const discount = product.originalPrice
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
@@ -224,6 +288,67 @@ export default function ProductDetail() {
               <span className="text-sm text-muted">({product.reviewCount} reviews)</span>
             </div>
 
+            {/* ── Variant Selector ──────────────────────────────── */}
+            {siblings.length > 0 && (
+              <div className="pd-variant-selector">
+                {/* Flavour row */}
+                {flavours.length > 0 && (
+                  <div className="pd-variant-selector__group">
+                    <p className="pd-variant-selector__label">
+                      Flavour: <strong>{currentFlavour}</strong>
+                    </p>
+                    <div className="pd-variant-selector__grid">
+                      {flavours.map(flavour => (
+                        <button
+                          key={flavour}
+                          id={`flavour-${flavour.toLowerCase().replace(/\s+/g, '-')}`}
+                          className={[
+                            'pd-variant-btn',
+                            flavour === currentFlavour ? 'pd-variant-btn--active' : ''
+                          ].join(' ')}
+                          onClick={() => handleFlavourClick(flavour)}
+                          aria-pressed={flavour === currentFlavour}
+                        >
+                          {flavour}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Size row */}
+                {sizes.length > 0 && (
+                  <div className="pd-variant-selector__group">
+                    <p className="pd-variant-selector__label">
+                      Size: <strong>{currentSize}</strong>
+                    </p>
+                    <div className="pd-variant-selector__grid pd-variant-selector__grid--size">
+                      {sizes.map(size => {
+                        const available = isSizeAvailable(size);
+                        const isActive  = size === currentSize;
+                        return (
+                          <button
+                            key={size}
+                            id={`size-${size.replace(/\s+/g, '-').toLowerCase()}`}
+                            className={[
+                              'pd-variant-btn',
+                              isActive ? 'pd-variant-btn--active' : '',
+                              !available && !isActive ? 'pd-variant-btn--disabled' : '',
+                            ].join(' ')}
+                            onClick={() => handleSizeClick(size)}
+                            disabled={!available && !isActive}
+                            aria-pressed={isActive}
+                          >
+                            {size}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Price */}
             <div className="product-detail__price-row">
               <span className="product-detail__price">{formatPrice(product.price)}</span>
@@ -236,41 +361,7 @@ export default function ProductDetail() {
               <span className="text-sm text-muted">/ {product.weight}</span>
             </div>
 
-            {/* Flavour Notes */}
-            {product.flavourNotes && (
-              <div className="product-detail__flavour">
-                <p className="text-xs text-muted" style={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Flavour Notes</p>
-                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.375rem' }}>
-                  {product.flavourNotes.map(note => (
-                    <span key={note} className="badge badge-dark">{note}</span>
-                  ))}
-                </div>
-              </div>
-            )}
 
-            {/* Meta Info */}
-            <div className="product-detail__meta-grid">
-              {product.origin && (
-                <div className="product-detail__meta-item">
-                  <Globe size={14} /> <span>Origin: <strong>{product.origin}</strong></span>
-                </div>
-              )}
-              {product.process && (
-                <div className="product-detail__meta-item">
-                  <Coffee size={14} /> <span>Process: <strong>{product.process}</strong></span>
-                </div>
-              )}
-              {product.caffeineLevel && (
-                <div className="product-detail__meta-item">
-                  <Zap size={14} /> <span>Caffeine: <strong>{product.caffeineLevel}</strong></span>
-                </div>
-              )}
-              {product.weight && (
-                <div className="product-detail__meta-item">
-                  <Package size={14} /> <span>Weight: <strong>{product.weight}</strong></span>
-                </div>
-              )}
-            </div>
 
             {/* Limited Stock */}
             {product.isLimited && product.remainingQty && (

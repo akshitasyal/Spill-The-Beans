@@ -21,7 +21,7 @@ export default function ProductCard({ product, layout = 'grid' }) {
     toggleDrawer(true);
     setTimeout(() => {
       setAdding(false);
-    }, 500);
+    }, 200);
   };
 
   const handleWishlist = (e) => {
@@ -51,7 +51,7 @@ export default function ProductCard({ product, layout = 'grid' }) {
           src={product.image}
           alt={product.name}
           className="product-card__image"
-          loading="lazy"
+          loading="eager"
         />
 
         {/* Badges */}

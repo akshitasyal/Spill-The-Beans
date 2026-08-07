@@ -102,6 +102,7 @@ function AppContent() {
             <Routes location={location} key={location.pathname}>
               <Route path="/" element={<Home />} />
               <Route path="/shop" element={<Shop />} />
+              <Route path="/shop/*" element={<Shop />} />
               <Route path="/product/:slug" element={<ProductDetail />} />
               <Route path="/bundles" element={<Bundles />} />
               <Route path="/gifts" element={<GiftPacks />} />

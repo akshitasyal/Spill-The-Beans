@@ -135,6 +135,29 @@ export const ProductRepository = {
   },
 
   /**
+   * Get all active variants that share the same baseProduct group.
+   * Returns a lean projection suitable for the variant selector UI.
+   */
+  async getVariants(baseProduct) {
+    if (!baseProduct) return [];
+    return prisma.product.findMany({
+      where: { isActive: true, baseProduct },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        flavour: true,
+        size: true,
+        price: true,
+        salePrice: true,
+        stock: true,
+        images: true,
+      },
+      orderBy: [{ flavour: 'asc' }, { size: 'asc' }],
+    });
+  },
+
+  /**
    * Find a single product by ID
    */
   async findById(id) {

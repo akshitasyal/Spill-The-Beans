@@ -141,10 +141,116 @@
   color: var(--text-muted, #8e8e8e);
 }
 
-.product-detail-custom__actions {
+/* ── Actions row: qty + add-to-cart + wishlist ───────────── */
+.product-detail-custom__actions-row {
   display: flex;
-  gap: 1rem;
-  margin-top: 0.5rem;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 0.25rem;
+}
+
+/* Quantity selector */
+.product-detail-custom__qty {
+  display: flex;
+  align-items: center;
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.product-detail-custom__qty-btn {
+  width: 2.25rem;
+  height: 2.75rem;
+  background: none;
+  border: none;
+  color: var(--text-cream, #f5ecd7);
+  font-size: 1.25rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.product-detail-custom__qty-btn:hover:not(:disabled) {
+  background: rgba(212, 136, 10, 0.12);
+  color: var(--color-amber, #d4880a);
+}
+
+.product-detail-custom__qty-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.product-detail-custom__qty-num {
+  min-width: 2rem;
+  text-align: center;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-cream, #f5ecd7);
+  border-left: 1px solid rgba(255, 255, 255, 0.07);
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
+  padding: 0 0.5rem;
+}
+
+/* Add to Cart button animation */
+.product-detail-custom__add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  justify-content: center;
+  min-width: 10rem;
+  transition: all 0.25s ease;
+}
+
+.product-detail-custom__add-btn--added {
+  background: #22c55e !important;
+  border-color: #22c55e !important;
+}
+
+/* Wishlist heart button */
+.product-detail-custom__wishlist-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 8px;
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-muted, #8e8e8e);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.product-detail-custom__wishlist-btn:hover {
+  border-color: rgba(240, 128, 128, 0.4);
+  color: #f08080;
+  background: rgba(240, 128, 128, 0.08);
+}
+
+.product-detail-custom__wishlist-btn--active {
+  border-color: #f08080;
+  color: #f08080;
+  background: rgba(240, 128, 128, 0.1);
+}
+
+/* Trust signals */
+.product-detail-custom__trust {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+}
+
+/* Keep old actions class for any legacy usage, now hidden */
+.product-detail-custom__actions {
+  display: none;
 }
 
 .product-detail-custom__specs {

@@ -20,6 +20,18 @@ export interface ReviewDTO {
   };
 }
 
+export interface ProductVariantDTO {
+  id: string;
+  name: string;
+  slug: string;
+  flavour: string | null;
+  size: string | null;
+  price: number;      // in paise
+  salePrice: number | null;
+  stock: number;
+  images: string[];
+}
+
 export interface ProductDTO {
   id: string;
   name: string;
@@ -30,6 +42,9 @@ export interface ProductDTO {
   images: string[];
   stock: number;
   weight: string | null;
+  baseProduct: string | null;
+  flavour: string | null;
+  size: string | null;
   roast: string | null;
   origin: string | null;
   process: string | null;

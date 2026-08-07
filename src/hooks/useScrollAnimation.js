@@ -8,20 +8,22 @@ export const useScrollAnimation = (threshold = 0.05) => {
     if (!el) return;
 
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('visible');
-          observer.unobserve(entry.target);
-        }
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            observer.unobserve(entry.target);
+          }
+        });
       },
       { threshold }
     );
 
-    // Handle multiple elements — no stagger, all animate together
+    // Handle multiple elements — all animate when scrolled into view
     const elements = el.querySelectorAll('.fade-in-up, .fade-in');
     if (elements.length > 0) {
-      elements.forEach((el) => {
-        observer.observe(el);
+      elements.forEach((child) => {
+        observer.observe(child);
       });
     } else {
       observer.observe(el);
@@ -41,11 +43,13 @@ export const useElementAnimation = (threshold = 0.05) => {
     if (!el) return;
 
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('visible');
-          observer.unobserve(entry.target);
-        }
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            observer.unobserve(entry.target);
+          }
+        });
       },
       { threshold }
     );

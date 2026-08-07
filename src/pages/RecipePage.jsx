@@ -134,10 +134,10 @@ const RELATED_RECIPES = [
 // ── Animation Variants ─────────────────────────────────────────────────────
 
 
-const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.09 } } };
+const stagger = { hidden: {}, show: { transition: { staggerChildren: 0 } } };
 const staggerItem = {
   hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] } },
+  show: { opacity: 1, y: 0, transition: { duration: 0.15, ease: [0.22, 1, 0.36, 1] } },
 };
 
 // ── New Reusable Sub-Components ────────────────────────────────────────────

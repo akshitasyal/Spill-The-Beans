@@ -248,7 +248,7 @@ export default function CategoriesPage() {
               <label style={labelStyle}>Image URL <span style={{ color: 'var(--text-admin-muted)' }}>(Optional)</span></label>
               <input
                 type="text"
-                placeholder="/assets/mugs.png"
+                placeholder="/assets/accessory_tumbler.png"
                 style={inputStyle}
                 value={form.image}
                 onChange={set('image')}

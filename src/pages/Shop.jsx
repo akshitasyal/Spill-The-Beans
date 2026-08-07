@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { ChevronDown, Coffee, ShoppingBag, LayoutGrid, Droplets } from 'lucide-react';
 import { getVisibleProducts, CATEGORIES } from '../data/products';
@@ -28,6 +28,13 @@ const COFFEE_CATEGORIES = [CATEGORIES.INSTANT, CATEGORIES.BUNDLE];
 
 export default function Shop() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const params = useParams();
+  const wildcard = params['*'] || '';
+  const pathParts = wildcard.split('/').filter(Boolean);
+
+  const pathCat = pathParts[0] ? pathParts[0].toLowerCase() : '';
+  const pathSub = pathParts[1] ? pathParts[1].toLowerCase() : '';
+
   const [priceOpen, setPriceOpen] = useState(false);
   const [flavoursOpen, setFlavoursOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
@@ -44,12 +51,30 @@ export default function Shop() {
     { value: 'over-800', label: `Over ${formatPrice(800)}` },
   ], [formatPrice]);
 
-  const activeFlavour = searchParams.get('flavour') || '';
   const activePriceRange = searchParams.get('price') || '';
   const activeSort = searchParams.get('sort') || 'featured';
   const searchQuery = searchParams.get('q') || '';
   const inStockOnly = searchParams.get('inStock') === 'true';
-  const activeCategory = searchParams.get('category') || '';
+
+  let activeCategory = searchParams.get('category') || '';
+  if (!activeCategory && pathCat) {
+    if (pathCat === 'coffee' || pathCat === 'instant' || pathCat === 'premium') {
+      activeCategory = 'coffee';
+    } else if (pathCat === 'tea' || pathCat === 'iced-tea' || pathCat === 'guilt-free') {
+      activeCategory = CATEGORIES.ICED_TEA;
+    } else if (pathCat === 'accessories') {
+      activeCategory = CATEGORIES.ACCESSORIES;
+    }
+  }
+
+  let activeFlavour = searchParams.get('flavour') || '';
+  if (!activeFlavour && pathSub) {
+    if (pathSub === 'lemon') activeFlavour = 'Lemon';
+    else if (pathSub === 'strawberry') activeFlavour = 'Strawberry';
+    else if (pathSub === 'guava' || pathSub === 'guava-chilli') activeFlavour = 'Guava Chilli';
+  }
+
+  const activeFilter = searchParams.get('filter') || (pathParts.includes('bestseller') ? 'bestseller' : pathSub === 'sachets' ? 'sachets' : pathSub === 'assorted' ? 'assorted' : '');
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -106,6 +131,14 @@ export default function Shop() {
       result = result.filter(p => p.category === CATEGORIES.ICED_TEA);
     }
 
+    if (activeFilter === 'bestseller') {
+      result = result.filter(p => p.isBestseller);
+    } else if (activeFilter === 'sachets') {
+      result = result.filter(p => p.tags?.includes('sachets') || p.weight?.toLowerCase().includes('sachet'));
+    } else if (activeFilter === 'assorted') {
+      result = result.filter(p => p.flavour === 'Assorted' || p.tags?.includes('assorted') || p.name.toLowerCase().includes('assorted'));
+    }
+
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       result = result.filter(p =>
@@ -117,7 +150,16 @@ export default function Shop() {
       );
     }
 
-    if (activeFlavour) result = result.filter(p => p.flavour === activeFlavour);
+    if (activeFlavour) {
+      const selectedFlavours = activeFlavour.split('&').map(s => s.trim().toLowerCase());
+      result = result.filter(p => {
+        if (!p.flavour) return false;
+        const pf = p.flavour.toLowerCase();
+        return pf === activeFlavour.toLowerCase() ||
+               selectedFlavours.some(f => pf.includes(f)) ||
+               p.flavourNotes?.some(note => selectedFlavours.some(f => note.toLowerCase().includes(f)));
+      });
+    }
     if (inStockOnly) result = result.filter(p => p.inStock);
 
     if (activePriceRange === 'under-400') {
@@ -137,7 +179,18 @@ export default function Shop() {
     }
 
     return result;
-  }, [visibleProducts, activeFlavour, activeSort, searchQuery, activePriceRange, inStockOnly, activeCategory]);
+  }, [visibleProducts, activeFlavour, activeFilter, activeSort, searchQuery, activePriceRange, inStockOnly, activeCategory]);
+
+  // Compute recommended products when filtered results are sparse (< 4)
+  const recommendedProducts = useMemo(() => {
+    if (filtered.length >= 4) return [];
+    const filteredIds = new Set(filtered.map(p => p.id));
+    return visibleProducts
+      .filter(p => !filteredIds.has(p.id))
+      .slice(0, 4);
+  }, [filtered, visibleProducts]);
+
+  const hasActiveFilters = !!(activeCategory || activeFlavour || activeFilter || activePriceRange || searchQuery || inStockOnly);
 
   const isAccessoriesView = activeCategory === CATEGORIES.ACCESSORIES;
 
@@ -156,32 +209,6 @@ export default function Shop() {
         <meta name="description" content="Browse Spill The Beans' full collection — premium Indian coffees, instant blends, bundles, gift packs, and coffee accessories." />
       </Helmet>
 
-      {/* Category Tabs */}
-      <div className="shop-category-tabs">
-        <div className="container shop-category-tabs__inner">
-          {CATEGORY_TABS.map(tab => {
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.value}
-                className={`shop-category-tab ${activeCategory === tab.value ? 'shop-category-tab--active' : ''}`}
-                onClick={() => setCategory(tab.value)}
-                id={`shop-tab-${tab.value || 'all'}`}
-              >
-                <Icon size={16} />
-                {tab.label}
-                <span className="shop-category-tab__count">
-                  {tab.value === ''
-                    ? visibleProducts.length
-                    : tab.value === 'coffee'
-                    ? visibleProducts.filter(p => COFFEE_CATEGORIES.includes(p.category)).length
-                    : visibleProducts.filter(p => p.category === tab.value).length}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
 
       {/* Filter Bar */}
       <div className="shop-filter-bar">
@@ -275,7 +302,7 @@ export default function Shop() {
                 className="shop-dropdown__btn"
                 onClick={() => setSortOpen(!sortOpen)}
               >
-                {SORT_OPTIONS.find(o => o.value === activeSort)?.label || 'Featured'}
+                Sort by: {SORT_OPTIONS.find(o => o.value === activeSort)?.label || 'Featured'}
                 <ChevronDown size={14} className={`shop-dropdown__chevron ${sortOpen ? 'rotated' : ''}`} />
               </button>
               {sortOpen && (
@@ -300,9 +327,53 @@ export default function Shop() {
         </div>
       </div>
 
+      {/* Active Filter Chips */}
+      {hasActiveFilters && (
+        <div className="container" style={{ marginTop: '1rem', marginBottom: '0.5rem' }}>
+          <div className="shop-active-filters">
+            <span className="shop-active-filters__title">Filtered by:</span>
+            {activeCategory && (
+              <span className="shop-active-chip">
+                Category: {activeCategory}
+                <button onClick={() => setParam('category', '')} aria-label="Clear category filter">✕</button>
+              </span>
+            )}
+            {activeFlavour && (
+              <span className="shop-active-chip">
+                Flavour: {activeFlavour}
+                <button onClick={() => setParam('flavour', '')} aria-label="Clear flavour filter">✕</button>
+              </span>
+            )}
+            {activeFilter && (
+              <span className="shop-active-chip">
+                Filter: {activeFilter}
+                <button onClick={() => setParam('filter', '')} aria-label="Clear filter">✕</button>
+              </span>
+            )}
+            {activePriceRange && (
+              <span className="shop-active-chip">
+                Price: {activePriceRange}
+                <button onClick={() => setParam('price', '')} aria-label="Clear price filter">✕</button>
+              </span>
+            )}
+            {inStockOnly && (
+              <span className="shop-active-chip">
+                In Stock Only
+                <button onClick={() => setParam('inStock', '')} aria-label="Clear in stock filter">✕</button>
+              </span>
+            )}
+            {searchQuery && (
+              <span className="shop-active-chip">
+                Search: "{searchQuery}"
+                <button onClick={() => setParam('q', '')} aria-label="Clear search filter">✕</button>
+              </span>
+            )}
+            <button className="shop-clear-all-btn" onClick={clearFilters}>Clear All</button>
+          </div>
+        </div>
+      )}
+
       <div className="container">
-
-
 
         {/* Products Grid */}
         {filtered.length === 0 ? (
@@ -315,13 +386,32 @@ export default function Shop() {
             </button>
           </div>
         ) : (
-          <div className="products-grid">
-            {filtered.map((product) => (
-              <div key={product.id}>
-                <ProductCard product={product} />
+          <>
+            <div className="products-grid">
+              {filtered.map((product) => (
+                <div key={product.id}>
+                  <ProductCard product={product} />
+                </div>
+              ))}
+            </div>
+
+            {/* Recommended Products Section if fewer than 4 items match */}
+            {recommendedProducts.length > 0 && (
+              <div className="shop-recommended-section">
+                <div className="shop-recommended-header">
+                  <h3 className="heading-2">You Might Also Like</h3>
+                  <p className="text-subtle">Explore popular bestsellers and other fan-favourite coffee blends</p>
+                </div>
+                <div className="products-grid">
+                  {recommendedProducts.map((product) => (
+                    <div key={product.id}>
+                      <ProductCard product={product} />
+                    </div>
+                  ))}
+                </div>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </div>
     </PageWrapper>

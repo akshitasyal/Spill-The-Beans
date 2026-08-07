@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingBag, Search, Menu, X, Flame, ChevronDown, User, LogOut } from 'lucide-react';
+import { ShoppingBag, Search, Menu, X, Flame, ChevronDown, ChevronRight, User, LogOut } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useCurrency } from '../context/CurrencyContext';
 import { useAuth } from '../context/AuthContext';
+import MegaMenu from './nav/MegaMenu';
+import { MEGA_MENU_DATA } from '../data/megaMenuData';
 import './Navbar.css';
 
 const NAV_LINKS = [
-  { label: 'Shop', to: '/shop' },
+  { label: 'Shop', to: '/shop', hasMegaMenu: true },
   { label: 'Bundles', to: '/bundles' },
   { label: 'Blog', to: '/blog' },
   { label: 'Contact', to: '/contact' },
@@ -26,7 +28,13 @@ export default function Navbar() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [announcementIdx, setAnnouncementIdx] = useState(0);
-  
+
+  // Mega Menu & Mobile Accordion states
+  const [megaMenuOpen, setMegaMenuOpen] = useState(false);
+  const [mobileShopOpen, setMobileShopOpen] = useState(false);
+  const [mobileSubSection, setMobileSubSection] = useState('coffee');
+  const hoverTimeoutRef = useRef(null);
+
   const { currency, setCurrency, currencies } = useCurrency();
   const [currencyOpen, setCurrencyOpen] = useState(false);
   const currencyRef = useRef(null);
@@ -37,6 +45,17 @@ export default function Navbar() {
   const { itemCount, toggleDrawer } = useCart();
   const navigate = useNavigate();
   const searchRef = useRef(null);
+
+  const handleMouseEnterShop = () => {
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+    setMegaMenuOpen(true);
+  };
+
+  const handleMouseLeaveShop = () => {
+    hoverTimeoutRef.current = setTimeout(() => {
+      setMegaMenuOpen(false);
+    }, 150);
+  };
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -54,6 +73,12 @@ export default function Navbar() {
   const location = useLocation();
   const isHome = location.pathname === '/';
   const isTransparent = isHome && !scrolled;
+
+  // Close mega menu on route change
+  useEffect(() => {
+    setMegaMenuOpen(false);
+    setMenuOpen(false);
+  }, [location.pathname]);
 
   useEffect(() => {
     const onScroll = () => {
@@ -112,7 +137,11 @@ export default function Navbar() {
         </div>
       </div>
 
-      <nav className={`navbar ${isTransparent ? 'navbar--transparent' : scrolled ? 'navbar--scrolled' : ''}`} role="navigation" aria-label="Main navigation">
+      <nav
+        className={`navbar ${isTransparent ? 'navbar--transparent' : scrolled ? 'navbar--scrolled' : ''} ${megaMenuOpen ? 'navbar--mega-open' : ''}`}
+        role="navigation"
+        aria-label="Main navigation"
+      >
         <div className="navbar__inner container">
           {/* Logo */}
           <Link to="/" className="navbar__logo" aria-label="Spill The Beans Home">
@@ -126,12 +155,24 @@ export default function Navbar() {
           {/* Desktop Nav Links */}
           <ul className="navbar__links hide-mobile" role="list">
             {NAV_LINKS.map(link => (
-              <li key={link.to}>
+              <li
+                key={link.to}
+                onMouseEnter={link.hasMegaMenu ? handleMouseEnterShop : undefined}
+                onMouseLeave={link.hasMegaMenu ? handleMouseLeaveShop : undefined}
+                className={link.hasMegaMenu ? 'navbar__item--has-mega' : ''}
+              >
                 <NavLink
                   to={link.to}
-                  className={({ isActive }) => `navbar__link ${isActive ? 'navbar__link--active' : ''}`}
+                  className={({ isActive }) =>
+                    `navbar__link ${isActive ? 'navbar__link--active' : ''} ${link.hasMegaMenu && megaMenuOpen ? 'navbar__link--active' : ''}`
+                  }
+                  aria-expanded={link.hasMegaMenu ? megaMenuOpen : undefined}
+                  aria-haspopup={link.hasMegaMenu ? 'true' : undefined}
                 >
                   {link.label}
+                  {link.hasMegaMenu && (
+                    <ChevronDown size={14} className={`navbar__link-chevron ${megaMenuOpen ? 'rotated' : ''}`} />
+                  )}
                 </NavLink>
               </li>
             ))}
@@ -274,6 +315,17 @@ export default function Navbar() {
           </div>
         </div>
 
+        {/* Desktop Mega Menu Overlay */}
+        <div
+          onMouseEnter={handleMouseEnterShop}
+          onMouseLeave={handleMouseLeaveShop}
+        >
+          <MegaMenu
+            isOpen={megaMenuOpen}
+            onClose={() => setMegaMenuOpen(false)}
+          />
+        </div>
+
         {/* Search Bar */}
         {searchOpen && (
           <div className="navbar__search">
@@ -314,8 +366,62 @@ export default function Navbar() {
                 <X size={22} />
               </button>
             </div>
+
             <ul className="mobile-menu__links" role="list">
-              {NAV_LINKS.map(link => (
+              {/* Mobile Accordion for Shop */}
+              <li className="mobile-menu__accordion-item">
+                <div
+                  className="mobile-menu__accordion-header"
+                  onClick={() => setMobileShopOpen(v => !v)}
+                >
+                  <span className="mobile-menu__link">Shop</span>
+                  <ChevronDown size={18} className={`mobile-accordion-chevron ${mobileShopOpen ? 'rotated' : ''}`} />
+                </div>
+
+                {mobileShopOpen && (
+                  <div className="mobile-menu__accordion-body">
+                    {MEGA_MENU_DATA.map(section => (
+                      <div key={section.id} className="mobile-section">
+                        <div
+                          className="mobile-section__title"
+                          onClick={() => setMobileSubSection(mobileSubSection === section.id ? null : section.id)}
+                        >
+                          <span>{section.title}</span>
+                          <ChevronRight size={14} className={`mobile-sub-chevron ${mobileSubSection === section.id ? 'rotated' : ''}`} />
+                        </div>
+
+                        {mobileSubSection === section.id && (
+                          <ul className="mobile-sub-list">
+                            {section.items.map(item => (
+                              <li key={item.id}>
+                                <Link
+                                  to={item.to}
+                                  className="mobile-sub-link"
+                                  onClick={() => setMenuOpen(false)}
+                                >
+                                  {item.label}
+                                </Link>
+                              </li>
+                            ))}
+                            <li>
+                              <Link
+                                to={section.viewAllLink}
+                                className="mobile-sub-link mobile-sub-link--all"
+                                onClick={() => setMenuOpen(false)}
+                              >
+                                View All {section.title} →
+                              </Link>
+                            </li>
+                          </ul>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </li>
+
+              {/* Other Mobile Nav Links */}
+              {NAV_LINKS.filter(l => !l.hasMegaMenu).map(link => (
                 <li key={link.to}>
                   <NavLink
                     to={link.to}
@@ -327,6 +433,7 @@ export default function Navbar() {
                 </li>
               ))}
             </ul>
+
             <div className="mobile-menu__footer">
               <p className="text-xs text-muted">© 2025 Spill The Beans. Crafted in India.</p>
             </div>

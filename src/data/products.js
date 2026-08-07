@@ -984,7 +984,54 @@ export const getProductBySlug = (slug) => {
 export const getProductsByCategory = (category) =>
   getVisibleProducts().filter(p => p.category === category);
 
-export const getRelatedProducts = (product, count = 3) =>
-  getVisibleProducts()
-    .filter(p => p.category === product.category && p.id !== product.id)
-    .slice(0, count);
+export const getRelatedProducts = (product, count = 4) => {
+  if (!product) return [];
+  const allVisible = getVisibleProducts();
+
+  const currentFlavour = product.flavour?.toLowerCase() || '';
+  const currentName = product.name?.toLowerCase() || '';
+
+  const seenFlavours = new Set();
+  if (currentFlavour) seenFlavours.add(currentFlavour);
+
+  const categoryRelated = [];
+  for (const p of allVisible) {
+    if (p.id === product.id || p.slug === product.slug) continue;
+    if (p.category === product.category) {
+      const pf = p.flavour?.toLowerCase() || p.name.toLowerCase();
+      if (!seenFlavours.has(pf)) {
+        seenFlavours.add(pf);
+        categoryRelated.push(p);
+      }
+    }
+  }
+
+  if (categoryRelated.length >= count) {
+    return categoryRelated.slice(0, count);
+  }
+
+  const result = [...categoryRelated];
+  const usedIds = new Set([product.id, ...result.map(p => p.id)]);
+
+  for (const p of allVisible) {
+    if (result.length >= count) break;
+    if (!usedIds.has(p.id)) {
+      const pf = p.flavour?.toLowerCase() || p.name.toLowerCase();
+      if (!seenFlavours.has(pf)) {
+        seenFlavours.add(pf);
+        usedIds.add(p.id);
+        result.push(p);
+      }
+    }
+  }
+
+  for (const p of allVisible) {
+    if (result.length >= count) break;
+    if (!usedIds.has(p.id)) {
+      usedIds.add(p.id);
+      result.push(p);
+    }
+  }
+
+  return result.slice(0, count);
+};

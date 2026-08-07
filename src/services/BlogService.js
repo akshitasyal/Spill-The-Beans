@@ -57,7 +57,7 @@ const MOCK_BLOGS = [
     slug: 'araku-valley-origin',
     excerpt: 'Discover the biodynamic practices and micro-climate giving Araku beans their signature sweet citrus notes.',
     content: 'Nestled in the Eastern Ghats, Araku Valley shade-grown coffee is nurtured by tribal growers. The iron-rich soils yield sweet spicy notes...',
-    image: '/assets/araku_valley_hero.png',
+    image: '/assets/product_araku.png',
     category: 'Origins',
     tags: ['Araku Valley', 'Organic', 'Single Origin'],
     readTime: '7 min',

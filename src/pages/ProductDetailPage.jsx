@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { Star, Loader2, Info, CheckCircle2, XCircle } from 'lucide-react';
+import { Star, Loader2, CheckCircle2, XCircle, ShoppingBag, Heart } from 'lucide-react';
 import { getProductBySlug } from '../services/products';
 import ProductGallery from '../components/products/ProductGallery';
 import RelatedProducts from '../components/products/RelatedProducts';
+import VariantSelector from '../components/products/VariantSelector';
 import Breadcrumbs from '../components/ui/Breadcrumbs';
 import StarRating from '../components/StarRating';
 import RoastBadge from '../components/RoastBadge';
 import PageWrapper from '../components/PageWrapper';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
+import { useWishlist } from '../context/WishlistContext';
 import { ReviewService } from '../services/ReviewService';
 import { useCurrency } from '../context/CurrencyContext';
 import './ProductDetailPage.css';
@@ -18,11 +21,17 @@ export default function ProductDetailPage() {
   const { slug } = useParams();
   const { user, isLoggedIn } = useAuth();
   const { formatPrice } = useCurrency();
-  
+  const { addItem, toggleDrawer } = useCart();
+  const { toggleWishlist, isWishlisted } = useWishlist();
+
   const [data, setData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('about');
+
+  // Add-to-cart state
+  const [qty, setQty] = useState(1);
+  const [adding, setAdding] = useState(false);
 
   // Submit review states
   const [rating, setRating] = useState(5);
@@ -41,6 +50,8 @@ export default function ProductDetailPage() {
       try {
         setIsLoading(true);
         setError(null);
+        // Reset qty when navigating to a different variant
+        setQty(1);
         const res = await getProductBySlug(slug);
         if (res.success && res.data) {
           setData(res.data);
@@ -58,15 +69,15 @@ export default function ProductDetailPage() {
     fetchDetail();
   }, [slug]);
 
-  const { product, category, reviewSummary, relatedProducts } = data || {};
+  const { product, variants = [], category, reviewSummary, relatedProducts } = data || {};
 
   useEffect(() => {
     if (product) {
       ReviewService.getReviews().then(res => {
-        if (res.success) {
+        if (res && res.success && Array.isArray(res.data)) {
           const productReviews = res.data.filter(
-            r => r.product.name.toLowerCase() === product.name.toLowerCase() &&
-            (r.isApproved || (user && r.user.email === user.email))
+            r => r && r.product?.name?.toLowerCase() === product.name?.toLowerCase() &&
+            (r.isApproved || (user && r.user?.email === user.email))
           );
           if (productReviews.length > 0) {
             setReviewsList(productReviews);
@@ -83,6 +94,15 @@ export default function ProductDetailPage() {
       setReviewsList(reviewSummary.recentReviews || []);
     }
   }, [product, reviewSummary, user]);
+
+  // Reset review form success message when slug changes
+  useEffect(() => {
+    setSubmitSuccess(false);
+    setSubmitError('');
+    setReviewTitle('');
+    setReviewBody('');
+    setRating(5);
+  }, [slug]);
 
   if (isLoading) {
     return (
@@ -134,8 +154,8 @@ export default function ProductDetailPage() {
         setSubmitSuccess(true);
         setReviewTitle('');
         setReviewBody('');
-        
-        // Reload reviews to show the new pending/approved review in local list
+
+        // Reload reviews
         const updated = await ReviewService.getReviews();
         if (updated.success) {
           const productReviews = updated.data.filter(
@@ -154,6 +174,22 @@ export default function ProductDetailPage() {
     }
   };
 
+  const handleAddToCart = () => {
+    setAdding(true);
+    // Build cart item from the DB product shape
+    const cartItem = {
+      id: product.id,
+      name: product.name,
+      price: product.salePrice ? product.salePrice / 100 : product.price / 100,
+      originalPrice: product.salePrice ? product.price / 100 : undefined,
+      image: product.images?.[0] || '',
+      quantity: qty,
+    };
+    for (let i = 0; i < qty; i++) addItem(cartItem);
+    toggleDrawer(true);
+    setTimeout(() => setAdding(false), 700);
+  };
+
   const discount = product.salePrice
     ? Math.round(((product.price - product.salePrice) / product.price) * 100)
     : null;
@@ -161,8 +197,9 @@ export default function ProductDetailPage() {
   const priceInINR = product.salePrice ? product.salePrice / 100 : product.price / 100;
   const originalPriceInINR = product.salePrice ? product.price / 100 : undefined;
   const inStock = product.stock > 0;
+  const wishlisted = isWishlisted(product.id);
 
-  // Mock data for ingredients and brew tabs based on flavors
+  // Mock data for tabs
   const getIngredients = () => {
     if (product.name.toLowerCase().includes('chocolate') || product.name.toLowerCase().includes('mocha')) {
       return '100% Premium Arabica Coffee Solubles, High-grade Premium Cocoa Powder, Natural Identical Flavouring Substances.';
@@ -173,14 +210,12 @@ export default function ProductDetailPage() {
     return '100% Premium Arabica Coffee Solubles, Natural Madagascar Vanilla Extracts.';
   };
 
-  const getBrewSteps = () => {
-    return [
-      'Add 1 to 2 teaspoons (approx. 2g) of Spill The Beans instant coffee powder to your favorite mug.',
-      'Pour in 150ml of hot (80°C - not boiling) water or milk.',
-      'Sweeten with honey, brown sugar, or normal sugar if desired.',
-      'Stir vigorously for 10 seconds to unlock the rich crema and intense aroma. Enjoy the magic!'
-    ];
-  };
+  const getBrewSteps = () => [
+    'Add 1 to 2 teaspoons (approx. 2g) of Spill The Beans instant coffee powder to your favorite mug.',
+    'Pour in 150ml of hot (80°C - not boiling) water or milk.',
+    'Sweeten with honey, brown sugar, or normal sugar if desired.',
+    'Stir vigorously for 10 seconds to unlock the rich crema and intense aroma. Enjoy the magic!',
+  ];
 
   return (
     <>
@@ -229,6 +264,16 @@ export default function ProductDetailPage() {
                 </span>
               </div>
 
+              {/* ── Variant Selector ───────────────────────────── */}
+              {variants.length > 0 && (
+                <VariantSelector
+                  variants={variants}
+                  currentFlavour={product.flavour ?? null}
+                  currentSize={product.size ?? null}
+                  basePath="/products"
+                />
+              )}
+
               {/* Pricing */}
               <div className="product-detail-custom__price-row">
                 <span className="product-detail-custom__price-current">
@@ -250,7 +295,7 @@ export default function ProductDetailPage() {
               <div className="product-detail-custom__stock-row">
                 {inStock ? (
                   <span className="product-detail-custom__stock-badge product-detail-custom__stock-badge--instock">
-                    <CheckCircle2 size={16} /> In Stock & Ready to Ship
+                    <CheckCircle2 size={16} /> In Stock &amp; Ready to Ship
                   </span>
                 ) : (
                   <span className="product-detail-custom__stock-badge product-detail-custom__stock-badge--outofstock">
@@ -266,23 +311,59 @@ export default function ProductDetailPage() {
 
               {/* Short description */}
               <p className="product-detail-custom__short-desc">
-                {product.description || 'Our signature e-commerce coffee blend, crafted with handpicked specialty grade Arabica beans sourced from premium estates in India. Roasted to perfection and instant-ready for your morning ritual.'}
+                {product.description || 'Our signature coffee blend, crafted with handpicked specialty grade Arabica beans sourced from premium estates in India. Roasted to perfection and instant-ready for your morning ritual.'}
               </p>
 
-              {/* Cart / Wishlist Placeholder Notification */}
-              <div className="product-detail-custom__placeholder-note">
-                <Info size={16} />
-                <span>Add to Cart and Wishlist are locked for this phase (Browsing only).</span>
+              {/* Quantity + Add to Cart + Wishlist */}
+              <div className="product-detail-custom__actions-row">
+                {/* Qty selector */}
+                <div className="product-detail-custom__qty">
+                  <button
+                    id="qty-dec-pdp"
+                    className="product-detail-custom__qty-btn"
+                    onClick={() => setQty(q => Math.max(1, q - 1))}
+                    aria-label="Decrease quantity"
+                    disabled={!inStock}
+                  >
+                    −
+                  </button>
+                  <span className="product-detail-custom__qty-num">{qty}</span>
+                  <button
+                    id="qty-inc-pdp"
+                    className="product-detail-custom__qty-btn"
+                    onClick={() => setQty(q => Math.min(10, q + 1))}
+                    aria-label="Increase quantity"
+                    disabled={!inStock || qty >= product.stock}
+                  >
+                    +
+                  </button>
+                </div>
+
+                <button
+                  id="product-add-to-cart-pdp"
+                  className={`btn btn-primary btn-lg product-detail-custom__add-btn ${adding ? 'product-detail-custom__add-btn--added' : ''}`}
+                  onClick={handleAddToCart}
+                  disabled={adding || !inStock}
+                >
+                  <ShoppingBag size={18} />
+                  {adding ? 'Added!' : 'Add to Cart'}
+                </button>
+
+                <button
+                  id={`wishlist-pdp-${product.id}`}
+                  className={`product-detail-custom__wishlist-btn ${wishlisted ? 'product-detail-custom__wishlist-btn--active' : ''}`}
+                  onClick={() => toggleWishlist(product.id)}
+                  aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+                >
+                  <Heart size={20} fill={wishlisted ? 'currentColor' : 'none'} />
+                </button>
               </div>
 
-              {/* Placeholders */}
-              <div className="product-detail-custom__actions">
-                <button className="btn btn-primary btn-lg" disabled style={{ opacity: 0.5 }}>
-                  Add to Cart
-                </button>
-                <button className="btn btn-outline btn-lg" disabled style={{ opacity: 0.5 }}>
-                  Add to Wishlist
-                </button>
+              {/* Trust signals */}
+              <div className="product-detail-custom__trust">
+                <span className="text-xs text-muted">🚚 Free shipping over {formatPrice(599)}</span>
+                <span className="text-xs text-muted">• 📦 Shipped within 48h</span>
+                <span className="text-xs text-muted">• 🔒 Secure checkout</span>
               </div>
 
               {/* Technical Specifications */}
@@ -371,20 +452,21 @@ export default function ProductDetailPage() {
               )}
             </div>
           </div>
+
           {/* Product Reviews Preview */}
           <div className="product-detail-custom__reviews-section">
             <h3 className="heading-2 text-cream">Customer Reviews</h3>
             <div className="product-detail-custom__reviews-summary-box">
               <div className="product-detail-custom__big-rating">
                 <span className="product-detail-custom__big-num">
-                  {reviewsList.length > 0 
+                  {reviewsList.length > 0
                     ? (reviewsList.reduce((acc, r) => acc + r.rating, 0) / reviewsList.length).toFixed(1)
                     : (reviewSummary?.averageRating || 4.8)}
                 </span>
-                <StarRating 
-                  rating={reviewsList.length > 0 
+                <StarRating
+                  rating={reviewsList.length > 0
                     ? (reviewsList.reduce((acc, r) => acc + r.rating, 0) / reviewsList.length)
-                    : (reviewSummary?.averageRating || 4.8)} 
+                    : (reviewSummary?.averageRating || 4.8)}
                 />
                 <span className="text-xs text-muted" style={{ marginTop: '0.25rem' }}>
                   Based on {reviewsList.length} ratings
@@ -454,7 +536,7 @@ export default function ProductDetailPage() {
               ) : isLoggedIn ? (
                 <form onSubmit={handleSubmitReview} className="product-detail-custom__review-form">
                   {submitError && <p className="text-sm" style={{ color: '#f08080', marginBottom: '1rem' }}>{submitError}</p>}
-                  
+
                   <div className="review-form-group">
                     <label className="text-xs text-muted" style={{ fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.25rem', display: 'block' }}>Rating</label>
                     <div style={{ display: 'flex', gap: '0.25rem' }}>
@@ -467,10 +549,10 @@ export default function ProductDetailPage() {
                           onMouseLeave={() => setHoverRating(0)}
                           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                         >
-                          <Star 
-                            size={20} 
-                            fill={(hoverRating || rating) >= star ? 'var(--accent-amber)' : 'none'} 
-                            color={(hoverRating || rating) >= star ? 'var(--accent-amber)' : 'var(--text-muted)'} 
+                          <Star
+                            size={20}
+                            fill={(hoverRating || rating) >= star ? 'var(--accent-amber)' : 'none'}
+                            color={(hoverRating || rating) >= star ? 'var(--accent-amber)' : 'var(--text-muted)'}
                           />
                         </button>
                       ))}
@@ -479,11 +561,11 @@ export default function ProductDetailPage() {
 
                   <div className="review-form-group" style={{ marginTop: '1rem' }}>
                     <label className="text-xs text-muted" style={{ fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.25rem', display: 'block' }}>Review Title</label>
-                    <input 
-                      type="text" 
-                      required 
-                      value={reviewTitle} 
-                      onChange={e => setReviewTitle(e.target.value)} 
+                    <input
+                      type="text"
+                      required
+                      value={reviewTitle}
+                      onChange={e => setReviewTitle(e.target.value)}
                       placeholder="Excellent flavour! Highly recommended."
                       className="input"
                       style={{ width: '100%', background: 'rgba(253,224,193,0.03)', border: '1px solid var(--border-subtle)', color: 'var(--text-cream)', padding: '0.55rem 0.75rem', borderRadius: '6px' }}
@@ -492,20 +574,20 @@ export default function ProductDetailPage() {
 
                   <div className="review-form-group" style={{ marginTop: '1rem' }}>
                     <label className="text-xs text-muted" style={{ fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.25rem', display: 'block' }}>Review Comment</label>
-                    <textarea 
-                      required 
+                    <textarea
+                      required
                       rows={4}
-                      value={reviewBody} 
-                      onChange={e => setReviewBody(e.target.value)} 
+                      value={reviewBody}
+                      onChange={e => setReviewBody(e.target.value)}
                       placeholder="Write your detailed experience here..."
                       className="input"
                       style={{ width: '100%', background: 'rgba(253,224,193,0.03)', border: '1px solid var(--border-subtle)', color: 'var(--text-cream)', resize: 'vertical', padding: '0.55rem 0.75rem', borderRadius: '6px' }}
                     />
                   </div>
 
-                  <button 
-                    type="submit" 
-                    disabled={isSubmitting} 
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
                     className="btn btn-primary"
                     style={{ marginTop: '1.25rem', padding: '0.625rem 2rem', fontSize: '0.875rem' }}
                   >

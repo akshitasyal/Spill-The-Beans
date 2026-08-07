@@ -22,9 +22,9 @@ categories = [
 ]
 
 coupons = [
-  { 'code': 'BEANS10', 'type': 'PERCENTAGE', 'value': 10, 'minOrderAmount': 50000, 'maxDiscount': None, 'usageLimit': None, 'perUserLimit': 1, 'isActive': True },
-  { 'code': 'FIRST15', 'type': 'PERCENTAGE', 'value': 15, 'minOrderAmount': 50000, 'maxDiscount': 30000, 'usageLimit': None, 'perUserLimit': 1, 'isActive': True },
-  { 'code': 'COFFEE20', 'type': 'PERCENTAGE', 'value': 20, 'minOrderAmount': 100000, 'maxDiscount': 50000, 'usageLimit': 500, 'perUserLimit': 1, 'isActive': True },
+  { 'code': 'BEANS10', 'type': 'PERCENTAGE', 'value': 10, 'minOrderAmount': 500, 'maxDiscount': None, 'usageLimit': None, 'perUserLimit': 1, 'isActive': True },
+  { 'code': 'FIRST15', 'type': 'PERCENTAGE', 'value': 15, 'minOrderAmount': 700, 'maxDiscount': 30000, 'usageLimit': None, 'perUserLimit': 1, 'isActive': True },
+  { 'code': 'COFFEE20', 'type': 'PERCENTAGE', 'value': 20, 'minOrderAmount': 1000, 'maxDiscount': 50000, 'usageLimit': 500, 'perUserLimit': 1, 'isActive': True },
 ]
 
 seed_code = f"""// ============================================================
