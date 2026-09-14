@@ -246,6 +246,13 @@ model Order {
   courierPartner    String?       @map("courier_partner")
   estimatedDelivery DateTime?     @map("estimated_delivery")
   notes             String?
+  // ShipMate Logistics 3PL Integration Fields
+  shipmateShipmentId        String?   @map("shipmate_shipment_id")
+  shipmateTrackingNumber    String?   @map("shipmate_tracking_number")
+  shipmateStatus            String?   @map("shipmate_status")
+  shipmateIntegrationStatus String?   @default("PENDING_SHIPMENT") @map("shipmate_integration_status")
+  shipmateLastSyncAt        DateTime? @map("shipmate_last_sync_at")
+  shipmateError             String?   @map("shipmate_error")
   createdAt         DateTime      @default(now()) @map("created_at")
   updatedAt         DateTime      @updatedAt @map("updated_at")
 

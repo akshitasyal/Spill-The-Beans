@@ -401,7 +401,7 @@ export default function Checkout() {
 
                 <div className="checkout-items-list">
                   {items.map((item, idx) => (
-                    <div className="checkout-item-row" key={idx}>
+                    <div className="checkout-item-row" key={item.cartItemId || `${item.id || item.productId}-${item.variant || 'def'}-${idx}`}>
                       <img src={item.image} alt={item.name} className="checkout-item-img" />
                       <div className="checkout-item-details">
                         <div className="checkout-item-name">{item.name}</div>

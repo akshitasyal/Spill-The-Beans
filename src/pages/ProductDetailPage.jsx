@@ -179,13 +179,15 @@ export default function ProductDetailPage() {
     // Build cart item from the DB product shape
     const cartItem = {
       id: product.id,
+      productId: product.id,
+      slug: product.slug,
       name: product.name,
       price: product.salePrice ? product.salePrice / 100 : product.price / 100,
       originalPrice: product.salePrice ? product.price / 100 : undefined,
       image: product.images?.[0] || '',
       quantity: qty,
     };
-    for (let i = 0; i < qty; i++) addItem(cartItem);
+    addItem(cartItem, qty);
     toggleDrawer(true);
     setTimeout(() => setAdding(false), 700);
   };

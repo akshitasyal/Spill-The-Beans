@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import { CartProvider, useCart } from '../context/CartContext';
+import { AuthProvider } from '../context/AuthContext';
 
 function CartTestHelper() {
   const { items, addItem, removeItem, updateQuantity, subtotal, clearCart } = useCart();
@@ -38,9 +39,11 @@ describe('Cart Context State Management', () => {
 
   it('should initialize with an empty cart list', () => {
     render(
-      <CartProvider>
-        <CartTestHelper />
-      </CartProvider>
+      <AuthProvider>
+        <CartProvider>
+          <CartTestHelper />
+        </CartProvider>
+      </AuthProvider>
     );
 
     expect(screen.getByTestId('cart-count')).toHaveTextContent('0');
@@ -49,9 +52,11 @@ describe('Cart Context State Management', () => {
 
   it('should add items and compute subtotal correctly', () => {
     render(
-      <CartProvider>
-        <CartTestHelper />
-      </CartProvider>
+      <AuthProvider>
+        <CartProvider>
+          <CartTestHelper />
+        </CartProvider>
+      </AuthProvider>
     );
 
     const addBtn = screen.getByText('Add Product');
@@ -66,9 +71,11 @@ describe('Cart Context State Management', () => {
 
   it('should update quantity correctly', () => {
     render(
-      <CartProvider>
-        <CartTestHelper />
-      </CartProvider>
+      <AuthProvider>
+        <CartProvider>
+          <CartTestHelper />
+        </CartProvider>
+      </AuthProvider>
     );
 
     const addBtn = screen.getByText('Add Product');
@@ -87,9 +94,11 @@ describe('Cart Context State Management', () => {
 
   it('should remove items correctly', () => {
     render(
-      <CartProvider>
-        <CartTestHelper />
-      </CartProvider>
+      <AuthProvider>
+        <CartProvider>
+          <CartTestHelper />
+        </CartProvider>
+      </AuthProvider>
     );
 
     const addBtn = screen.getByText('Add Product');

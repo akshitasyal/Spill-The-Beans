@@ -73,4 +73,38 @@ export const OrderService = {
     }
     return { success: true, data: results };
   },
+
+  async retryShipMateDispatch(id) {
+    const res = await fetchWithAuth(`${API_BASE_URL}/orders/${id}/retry-shipmate`, {
+      method: 'POST',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Failed to dispatch to ShipMate');
+    }
+    return await res.json();
+  },
+
+  async syncShipMateTracking(id) {
+    const res = await fetchWithAuth(`${API_BASE_URL}/orders/${id}/sync-shipmate`, {
+      method: 'POST',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Failed to sync live tracking from ShipMate');
+    }
+    return await res.json();
+  },
+
+  async sendShipMateTestOrder(referenceId = 'STB-10001') {
+    const res = await fetchWithAuth(`${API_BASE_URL}/orders/shipmate-test`, {
+      method: 'POST',
+      body: JSON.stringify({ referenceId }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Failed to send test order to ShipMate');
+    }
+    return await res.json();
+  },
 };

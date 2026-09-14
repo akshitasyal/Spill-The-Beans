@@ -35,9 +35,9 @@ export const CartController = {
   async addItem(req, res, next) {
     try {
       const userId = await getUserIdFromReq(req);
-      const { productId, quantity, variant } = req.body;
+      const { productId, quantity, variant, slug, name } = req.body;
 
-      await CartRepository.addItem(userId, { productId, quantity, variant });
+      await CartRepository.addItem(userId, { productId, quantity, variant, slug, name });
       const cart = await CartRepository.getOrCreateCart(userId);
 
       res.status(201).json({ success: true, data: cart, message: 'Item added to cart.' });

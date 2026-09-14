@@ -210,7 +210,7 @@ export default function ProductDetail() {
 
   const handleAddToCart = () => {
     setAdding(true);
-    for (let i = 0; i < qty; i++) addItem(product);
+    addItem(product, qty);
     toggleDrawer(true);
     setTimeout(() => {
       setAdding(false);

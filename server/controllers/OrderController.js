@@ -5,6 +5,7 @@ import { OrderRepository } from '../repositories/OrderRepository.js';
 import { CartRepository } from '../repositories/CartRepository.js';
 import { CouponRepository } from '../repositories/CouponRepository.js';
 import { UserRepository } from '../repositories/UserRepository.js';
+import { ShipMateIntegrationService } from '../services/ShipMateIntegrationService.js';
 import prisma from '../db/client.js';
 
 async function resolveUserId(clerkId) {
@@ -108,9 +109,20 @@ export const OrderController = {
       // 8. Clear the cart
       await CartRepository.clearCart(userId);
 
+      // 9. Dispatch to ShipMate Logistics API (Non-blocking fault tolerance)
+      let finalOrder = order;
+      try {
+        finalOrder = await ShipMateIntegrationService.dispatchOrderToShipMate(order.id, {
+          actorName: order.user?.name || req.user?.name || 'Customer',
+        });
+      } catch (shipmateErr) {
+        console.warn(`[OrderController] ShipMate auto-dispatch deferred for order ${order.id}: ${shipmateErr.message}`);
+        finalOrder = (await OrderRepository.findById(order.id)) || order;
+      }
+
       res.status(201).json({
         success: true,
-        data: order,
+        data: finalOrder,
         message: 'Order placed successfully.',
       });
     } catch (err) {
@@ -186,6 +198,8 @@ export const OrderController = {
           estimatedDelivery: order.estimatedDelivery,
           courierPartner: order.courierPartner,
           trackingId: order.trackingId,
+          shipmateTrackingNumber: order.shipmateTrackingNumber,
+          shipmateStatus: order.shipmateStatus,
           createdAt: order.createdAt,
           address: order.address ? {
             city: order.address.city,
@@ -219,7 +233,13 @@ export const OrderController = {
 
       const {
         // Address fields
-        phone, line1, line2, city, state, pincode,
+        name,
+        phone,
+        line1,
+        line2,
+        city,
+        state,
+        pincode,
         // Order fields
         paymentMethod = 'COD',
         couponCode,
@@ -345,9 +365,20 @@ export const OrderController = {
         await CouponRepository.incrementUsage(couponId).catch(() => {});
       }
 
+      // 8. Dispatch to ShipMate Logistics API (Non-blocking fault tolerance)
+      let finalOrder = order;
+      try {
+        finalOrder = await ShipMateIntegrationService.dispatchOrderToShipMate(order.id, {
+          actorName: req.user?.name || 'Customer',
+        });
+      } catch (shipmateErr) {
+        console.warn(`[OrderController] ShipMate auto-dispatch deferred for order ${order.id}: ${shipmateErr.message}`);
+        finalOrder = (await OrderRepository.findById(order.id)) || order;
+      }
+
       res.status(201).json({
         success: true,
-        data: order,
+        data: finalOrder,
         message: 'Order placed successfully.',
       });
     } catch (err) {

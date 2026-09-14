@@ -17,6 +17,7 @@ export default function OrdersPage() {
   const [pendingDeleteId, setPendingDeleteId] = useState(null);
   const [toastMsg, setToastMsg] = useState('');
   const [viewMode, setViewMode] = useState('cards'); // 'cards' or 'table'
+  const [sendingTestOrder, setSendingTestOrder] = useState(false);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -30,7 +31,21 @@ export default function OrdersPage() {
 
   const showToast = (msg) => {
     setToastMsg(msg);
-    setTimeout(() => setToastMsg(''), 3000);
+    setTimeout(() => setToastMsg(''), 3500);
+  };
+
+  const handleSendShipMateTestOrder = async () => {
+    setSendingTestOrder(true);
+    try {
+      const res = await OrderService.sendShipMateTestOrder('STB-10001');
+      if (res.success) {
+        showToast(`✅ ShipMate test order ${res.referenceId} created! Tracking: ${res.shipment?.trackingNumber || 'Active'}`);
+        fetchOrders();
+      }
+    } catch (err) {
+      showToast(`❌ ShipMate test failed: ${err.message}`);
+    }
+    setSendingTestOrder(false);
   };
 
   const fetchOrders = useCallback(() => {
@@ -99,6 +114,27 @@ export default function OrdersPage() {
               <List size={14} /> Table View
             </button>
           </div>
+          <button
+            onClick={handleSendShipMateTestOrder}
+            disabled={sendingTestOrder}
+            style={{
+              background: '#2563eb',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '6px',
+              padding: '0.45rem 0.75rem',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              cursor: sendingTestOrder ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+            }}
+            title="Dispatch realistic test order (STB-10001) to ShipMate API"
+          >
+            <Truck size={14} />
+            {sendingTestOrder ? 'Sending to ShipMate...' : 'Send Test Order to ShipMate'}
+          </button>
           <button onClick={fetchOrders} style={refreshBtn} title="Refresh orders">
             <RefreshCw size={14} /> Refresh
           </button>

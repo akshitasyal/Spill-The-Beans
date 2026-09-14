@@ -3,6 +3,7 @@
 // ============================================================
 import prisma from '../db/client.js';
 import { OrderRepository } from '../repositories/OrderRepository.js';
+import { ShipMateIntegrationService } from '../services/ShipMateIntegrationService.js';
 
 export const AdminController = {
   // ── PRODUCTS CRUD ──────────────────────────────────────────
@@ -353,6 +354,58 @@ export const AdminController = {
       const { actorName, action, details } = req.body;
       const log = await OrderRepository.logAdminAudit(id, { actorName, action, details });
       res.status(201).json({ success: true, data: log });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  /**
+   * POST /api/admin/orders/:id/retry-shipmate
+   * Retries dispatching an order to ShipMate using the deterministic idempotency key
+   */
+  async retryShipMateDispatch(req, res, next) {
+    try {
+      const { id } = req.params;
+      const order = await ShipMateIntegrationService.dispatchOrderToShipMate(id, {
+        actorName: req.user?.name || 'Admin',
+      });
+      res.json({
+        success: true,
+        data: order,
+        message: 'Order successfully dispatched to ShipMate logistics.',
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  /**
+   * POST /api/admin/orders/:id/sync-shipmate
+   * Fetches latest live tracking status from ShipMate and updates order
+   */
+  async syncShipMateTracking(req, res, next) {
+    try {
+      const { id } = req.params;
+      const result = await ShipMateIntegrationService.syncTracking(id);
+      res.json({
+        success: true,
+        data: result,
+        message: 'Live tracking synced from ShipMate.',
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  /**
+   * POST /api/admin/orders/shipmate-test
+   * Dispatches a realistic test order (e.g. STB-10001) over real HTTP to ShipMate
+   */
+  async createShipMateTestOrder(req, res, next) {
+    try {
+      const { referenceId = `STB-10001` } = req.body || {};
+      const result = await ShipMateIntegrationService.createTestOrder({ referenceId });
+      res.status(201).json(result);
     } catch (err) {
       next(err);
     }

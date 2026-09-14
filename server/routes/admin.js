@@ -33,6 +33,9 @@ router.get('/inventory/history',  AdminController.listInventoryHistory);
 router.post('/inventory/history', AdminController.createInventoryLog);
 
 // ── Orders ────────────────────────────────────────────────
+router.post('/orders/shipmate-test',         AdminController.createShipMateTestOrder);
+router.post('/orders/:id/retry-shipmate',    AdminController.retryShipMateDispatch);
+router.post('/orders/:id/sync-shipmate',     AdminController.syncShipMateTracking);
 router.get('/orders',                 AdminController.listOrders);
 router.get('/orders/:id',             AdminController.getOrder);
 router.patch('/orders/:id/status',    AdminController.updateOrder);

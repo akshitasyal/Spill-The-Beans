@@ -21,6 +21,7 @@ import orderRoutes    from './routes/orders.js';
 import couponRoutes   from './routes/coupons.js';
 import wishlistRoutes from './routes/wishlist.js';
 import adminRoutes    from './routes/admin.js';
+import webhookRoutes  from './routes/webhooks.js';
 
 const app = express();
 
@@ -135,6 +136,7 @@ app.use('/api/cart',       cartRoutes);
 app.use('/api/orders',     orderRoutes);
 app.use('/api/coupons',    couponRoutes);
 app.use('/api/wishlist',   wishlistRoutes);
+app.use('/api/webhooks',   webhookRoutes);
 
 // ─────────────────────────────────────────────────────────────
 // ERROR HANDLING — must be LAST

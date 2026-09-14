@@ -104,8 +104,8 @@ export default function CartDrawer() {
               </Link>
             </div>
           ) : (
-            items.map(item => (
-              <div key={item.id} className="cart-item">
+            items.map((item, idx) => (
+              <div key={item.cartItemId || `${item.id || item.productId}-${item.variant || 'def'}-${idx}`} className="cart-item">
                 <div className="cart-item__image-wrap">
                   <img src={item.image} alt={item.name} className="cart-item__image" loading="lazy" />
                 </div>

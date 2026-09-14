@@ -385,8 +385,8 @@ export default function Cart() {
             ) : (
               /* Items Column */
               <div className="cart-items-col">
-                {items.map(item => (
-                  <div key={item.id} className="cart-page-item">
+                {items.map((item, idx) => (
+                  <div key={item.cartItemId || `${item.id || item.productId}-${item.variant || 'def'}-${idx}`} className="cart-page-item">
                     <Link to={`/product/${item.slug}`} className="cart-page-item__image-wrap">
                       <img src={item.image} alt={item.name} className="cart-page-item__image" />
                     </Link>

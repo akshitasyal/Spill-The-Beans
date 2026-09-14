@@ -6,7 +6,7 @@ import StatusBadge from '../../components/admin/StatusBadge';
 import InvoiceCard from '../../components/admin/InvoiceCard';
 import { 
   ArrowLeft, MapPin, CreditCard, Package, Truck, Printer, Mail, 
-  XCircle, CheckCircle2, History, Sparkles
+  XCircle, CheckCircle2, History, Sparkles, RefreshCw, ExternalLink, ShieldCheck, AlertTriangle
 } from 'lucide-react';
 
 const STAGE_FLOW = [
@@ -53,9 +53,42 @@ export default function OrderDetailPage() {
   const [trackingNumber, setTrackingNumber] = useState('');
   const [savingCourier, setSavingCourier] = useState(false);
 
+  // ShipMate 3PL Integration State
+  const [retryingShipMate, setRetryingShipMate] = useState(false);
+  const [syncingShipMate, setSyncingShipMate] = useState(false);
+
   const showToast = (msg, isError = false) => {
     setToastMsg({ msg, isError });
     setTimeout(() => setToastMsg({ msg: '', isError: false }), 3500);
+  };
+
+  const handleRetryShipMate = async () => {
+    setRetryingShipMate(true);
+    try {
+      const res = await OrderService.retryShipMateDispatch(id);
+      if (res.success) {
+        showToast('Successfully dispatched order to ShipMate logistics!');
+        await fetchOrder();
+      }
+    } catch (err) {
+      showToast(err.message || 'ShipMate dispatch failed', true);
+      await fetchOrder();
+    }
+    setRetryingShipMate(false);
+  };
+
+  const handleSyncShipMate = async () => {
+    setSyncingShipMate(true);
+    try {
+      const res = await OrderService.syncShipMateTracking(id);
+      if (res.success) {
+        showToast('ShipMate live tracking synced!');
+        await fetchOrder();
+      }
+    } catch (err) {
+      showToast(err.message || 'Failed to sync tracking', true);
+    }
+    setSyncingShipMate(false);
   };
 
   useEffect(() => {
@@ -441,6 +474,115 @@ export default function OrderDetailPage() {
                 <XCircle size={18} color="#ef4444" /> Order Cancelled
               </div>
             )}
+          </div>
+
+          {/* ShipMate 3PL Logistics Integration Card */}
+          <div style={{ ...cardStyle, border: '1px solid #3b82f6', background: 'linear-gradient(180deg, rgba(59, 130, 246, 0.04) 0%, rgba(15, 23, 42, 0.6) 100%)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}>
+              <h2 style={{ ...cardTitleStyle, margin: 0, color: '#60a5fa', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Truck size={16} color="#60a5fa" /> ShipMate 3PL Logistics
+              </h2>
+              {order.shipmateIntegrationStatus === 'SHIPMENT_CREATED' && (
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '0.2rem 0.6rem', borderRadius: '999px', background: 'rgba(34, 197, 94, 0.15)', color: '#4ade80', border: '1px solid rgba(34, 197, 94, 0.3)' }}>
+                  Connected
+                </span>
+              )}
+              {order.shipmateIntegrationStatus === 'PENDING_SHIPMENT' && (
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '0.2rem 0.6rem', borderRadius: '999px', background: 'rgba(234, 179, 8, 0.15)', color: '#facc15', border: '1px solid rgba(234, 179, 8, 0.3)' }}>
+                  Pending
+                </span>
+              )}
+              {order.shipmateIntegrationStatus === 'SHIPMENT_FAILED' && (
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '0.2rem 0.6rem', borderRadius: '999px', background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+                  Dispatch Failed
+                </span>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.82rem', marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.4rem' }}>
+                <span style={{ color: 'var(--text-admin-muted)' }}>Tracking Number</span>
+                <span style={{ fontWeight: 600, color: '#93c5fd', fontFamily: 'monospace' }}>
+                  {order.shipmateTrackingNumber || order.trackingId || 'Not Dispatched'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.4rem' }}>
+                <span style={{ color: 'var(--text-admin-muted)' }}>ShipMate Status</span>
+                <span style={{ fontWeight: 600, color: 'var(--text-admin-bright)' }}>
+                  {order.shipmateStatus || 'N/A'}
+                </span>
+              </div>
+              {order.shipmateShipmentId && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.4rem' }}>
+                  <span style={{ color: 'var(--text-admin-muted)' }}>Shipment UUID</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-admin-muted)', fontFamily: 'monospace' }}>
+                    {order.shipmateShipmentId.substring(0, 18)}...
+                  </span>
+                </div>
+              )}
+              {order.shipmateLastSyncAt && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-admin-muted)' }}>Last Synced</span>
+                  <span style={{ color: 'var(--text-admin-muted)', fontSize: '0.75rem' }}>
+                    {new Date(order.shipmateLastSyncAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {order.shipmateError && (
+              <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '6px', padding: '0.6rem', marginBottom: '0.8rem', fontSize: '0.78rem', color: '#fca5a5' }}>
+                <strong>Error:</strong> {order.shipmateError}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                onClick={handleRetryShipMate}
+                disabled={retryingShipMate}
+                style={{
+                  flex: 1,
+                  background: '#2563eb',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '0.55rem 0.8rem',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  cursor: retryingShipMate ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.4rem',
+                }}
+              >
+                <RefreshCw size={13} className={retryingShipMate ? 'spin' : ''} />
+                {retryingShipMate ? 'Dispatching...' : order.shipmateTrackingNumber ? 'Re-Dispatch to ShipMate' : 'Dispatch to ShipMate'}
+              </button>
+              {order.shipmateTrackingNumber && (
+                <button
+                  onClick={handleSyncShipMate}
+                  disabled={syncingShipMate}
+                  style={{
+                    background: 'rgba(255,255,255,0.06)',
+                    color: 'var(--text-admin-bright)',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    borderRadius: '6px',
+                    padding: '0.55rem 0.8rem',
+                    fontSize: '0.8rem',
+                    fontWeight: 500,
+                    cursor: syncingShipMate ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.4rem',
+                  }}
+                >
+                  <RefreshCw size={13} className={syncingShipMate ? 'spin' : ''} />
+                  {syncingShipMate ? 'Sync Live' : 'Sync Live'}
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Courier Integration Readiness Card */}

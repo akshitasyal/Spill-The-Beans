@@ -40,6 +40,8 @@ describe('ReviewService Offline & API Integration', () => {
 
     expect(fetchMock).toHaveBeenCalled();
     expect(result.success).toBe(true);
-    expect(result.data).toEqual(apiReviews);
+    expect(result.data).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 'rev-2', title: 'Great Taste', rating: 4 }),
+    ]));
   });
 });

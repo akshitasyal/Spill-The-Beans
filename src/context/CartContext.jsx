@@ -10,18 +10,27 @@ const cartReducer = (state, action) => {
       return { ...state, items: action.payload };
 
     case 'ADD_ITEM': {
-      const existing = state.items.find(i => (i.id || i.productId) === (action.payload.id || action.payload.productId));
+      const addQty = Math.max(1, Number(action.payload.quantity) || 1);
+      const targetId = action.payload.id || action.payload.productId;
+      const targetVariant = action.payload.variant || null;
+
+      const existing = state.items.find(i =>
+        ((i.id && i.id === targetId) || (i.productId && i.productId === targetId)) &&
+        ((i.variant || null) === targetVariant)
+      );
+
       if (existing) {
         return {
           ...state,
           items: state.items.map(i =>
-            (i.id || i.productId) === (action.payload.id || action.payload.productId)
-              ? { ...i, quantity: Math.min(i.quantity + 1, 10) }
+            ((i.id && i.id === targetId) || (i.productId && i.productId === targetId)) &&
+            ((i.variant || null) === targetVariant)
+              ? { ...i, quantity: Math.min(i.quantity + addQty, 10) }
               : i
           ),
         };
       }
-      return { ...state, items: [...state.items, { ...action.payload, quantity: action.payload.quantity || 1 }] };
+      return { ...state, items: [...state.items, { ...action.payload, quantity: addQty }] };
     }
 
     case 'REMOVE_ITEM':
@@ -166,8 +175,10 @@ export const CartProvider = ({ children }) => {
   }, [isLoggedIn, user, mergeCartWithBackend, fetchDbCart]);
 
   // Add Item handler
-  const addItem = async (product) => {
-    dispatch({ type: 'ADD_ITEM', payload: product });
+  const addItem = async (product, quantity = 1) => {
+    const qtyToAdd = Math.max(1, Number(quantity) || Number(product.quantity) || 1);
+    const payload = { ...product, quantity: qtyToAdd };
+    dispatch({ type: 'ADD_ITEM', payload });
 
     if (isLoggedIn && user) {
       try {
@@ -180,7 +191,9 @@ export const CartProvider = ({ children }) => {
           },
           body: JSON.stringify({
             productId: product.id || product.productId,
-            quantity: 1,
+            slug: product.slug,
+            name: product.name,
+            quantity: qtyToAdd,
             variant: product.variant || null,
           }),
         });
