@@ -21,6 +21,8 @@ export class ShipMateIntegrationService {
       state: process.env.SHIPMATE_PICKUP_STATE || 'Karnataka',
       postalCode: process.env.SHIPMATE_PICKUP_PINCODE || '560038',
       country: process.env.SHIPMATE_PICKUP_COUNTRY || 'India',
+      latitude: parseFloat(process.env.SHIPMATE_PICKUP_LAT || '12.9784'),
+      longitude: parseFloat(process.env.SHIPMATE_PICKUP_LNG || '77.6408'),
     };
   }
 
@@ -55,6 +57,8 @@ export class ShipMateIntegrationService {
       state: customerAddress.state || 'Karnataka',
       postalCode: customerAddress.pincode || '560001',
       country: 'India',
+      latitude: customerAddress.latitude ? parseFloat(customerAddress.latitude) : 12.9716,
+      longitude: customerAddress.longitude ? parseFloat(customerAddress.longitude) : 77.5946,
     };
 
     // Calculate total weight (estimate 0.35kg per coffee item if not specified)
@@ -291,6 +295,8 @@ export class ShipMateIntegrationService {
         state: 'Karnataka',
         postalCode: '560103',
         country: 'India',
+        latitude: 12.9352,
+        longitude: 77.6245,
       },
       packageInfo: {
         weight: 1.2,
