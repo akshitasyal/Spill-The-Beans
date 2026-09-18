@@ -10,7 +10,7 @@ The project focuses on building a realistic, scalable e-commerce workflow with a
 
 ## 🌐 Live Demo
 
-**Live Website:** spill-the-beans-mu.vercel.app
+**Live Website:** [spill-the-beans-mu.vercel.app](https://spill-the-beans-mu.vercel.app/)
 
 
 
