@@ -1,4 +1,4 @@
-# ☕ Spill the Beans
+#  Spill the Beans
 
 ### A Modern Full-Stack Coffee E-Commerce Platform
 
@@ -8,7 +8,7 @@ The project focuses on building a realistic, scalable e-commerce workflow with a
 
 ---
 
-## 🌐 Live Demo
+##  Live Demo
 
 **Live Website:** [spill-the-beans-mu.vercel.app](https://spill-the-beans-mu.vercel.app/)
 
@@ -42,10 +42,9 @@ The project focuses on building a realistic, scalable e-commerce workflow with a
 
 ---
 
-# ✨ Features
+#  Features
 
-## 🛍️ Customer Experience
-
+##  Customer Experience
 ### Product Discovery
 
 * Browse the complete coffee collection
@@ -55,7 +54,7 @@ The project focuses on building a realistic, scalable e-commerce workflow with a
 * Pricing and availability information
 * Responsive product cards
 
-### 🛒 Shopping Cart
+###  Shopping Cart
 
 * Add products to cart
 * Update product quantities
@@ -64,7 +63,7 @@ The project focuses on building a realistic, scalable e-commerce workflow with a
 * Persistent cart state
 * Order summary before checkout
 
-### 💳 Secure Checkout
+###  Secure Checkout
 
 The application supports online payment processing through integrated payment gateways.
 
@@ -83,7 +82,7 @@ Features include:
 
 ---
 
-# 🔐 Authentication
+#  Authentication
 
 Spill the Beans uses **Clerk** for authentication and user management.
 
@@ -100,7 +99,7 @@ Authentication is also used to protect user-specific functionality and administr
 
 ---
 
-# 📦 Order Management
+#  Order Management
 
 After completing checkout, users can view their orders and track their purchase history.
 
@@ -140,7 +139,7 @@ Each order contains information such as:
 
 ---
 
-# 🚚 ShipMate Integration
+#  ShipMate Integration
 
 One of the major features of Spill the Beans is its integration with **ShipMate**, the logistics and shipment-management platform developed as a separate project.
 
